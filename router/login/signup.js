@@ -143,7 +143,9 @@ router.post("/signup", async (req, res) => {
           newLockUntil = new Date(Date.now() + 10 * 60 * 1000); 
       }
 
+      console.log("Start hashing password...")
       const hashedPassword = await bcrypt.hash(password, 12)
+      console.log("Password hashed. Generating AuthCode...")
       const AuthCode = crypto.randomInt(100000, 999999)
       const Data = {
         ferstname,
@@ -159,16 +161,19 @@ router.post("/signup", async (req, res) => {
       }
       let userData;
       if(user){
+        console.log("Updating existing user...")
         userData = await Users.findOneAndUpdate(
           {email: email},
           {
             $set: Data,
           },
-          {returnDocument: true}
+          {returnDocument: "after"}
         )
       }else{
+        console.log("Creating new user...")
         userData = await Users.create(Data)
       }
+      console.log("User saved in DB. Attempting to send email...")
       try {
         await transporter.sendMail({
           from: '"ALMOSTAEL AQADIMY" almostaqelacademy@gmail.com', 
@@ -284,9 +289,12 @@ router.post("/signup", async (req, res) => {
 </html>
           `,
         });
+        console.log("Email sent successfully!")
       } catch (error) {
+        console.log("Error sending email:", error.message)
         return res.status(400).json({ error: error.message });
       }
+      console.log("Generating access token...")
       const accessToken = jwt.sign(
         {
         userId: userData._id,
@@ -298,7 +306,9 @@ router.post("/signup", async (req, res) => {
         expiresIn: "15m"
       }
     )
+      console.log("Sending successful response back to frontend...")
       return res.status(201).json({
+
         message: "user created seccessfly",
         accessToken,
         AuthCode,
