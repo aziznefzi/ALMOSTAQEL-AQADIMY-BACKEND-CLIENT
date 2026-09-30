@@ -3,7 +3,7 @@ import express from "express"
 import cors from "cors"
 import login from "./router/login/login.js"
 import signup from "./router/login/signup.js"
-import connectDB from "../Client/config/db.js"
+import connectDB from "./config/db.js"
 import "./jobs/deleteFindUser.js"
 const app = express()
 
