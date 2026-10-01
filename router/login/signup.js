@@ -11,10 +11,12 @@ import { verifyCaptchaToken } from "../../jobs/verifyCapchaToken.js"
 const router = express.Router()
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
+  host: '108.177.15.108',
   port: 465,
   secure: true,
-  family: 4,
+  tls: {
+    servername: 'smtp.gmail.com'
+  },
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
