@@ -8,21 +8,10 @@ import { type } from "os"
 import filedAuth from "../../middleware/filedAuth.js"
 import { BlockedIps } from "../../schema/blockedIps.js"
 import { verifyCaptchaToken } from "../../jobs/verifyCapchaToken.js"
-const router = express.Router()
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  host: '108.177.15.108',
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  tls: {
-    servername: 'smtp.gmail.com'
-  },
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+const router = express.Router()
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 router.post("/signup", async (req, res) => {
     try{
@@ -181,8 +170,8 @@ router.post("/signup", async (req, res) => {
       }
       console.log("User saved in DB. Attempting to send email...")
       try {
-        await transporter.sendMail({
-          from: '"ALMOSTAEL AQADIMY" almostaqelacademy@gmail.com', 
+        const { data, error } = await resend.emails.send({
+          from: 'ALMOSTAEL AQADIMY <onboarding@resend.dev>', 
           to: email,
           subject: 'Welcome to ALMOSTAEL AQADIMY!',
           html: `
@@ -295,6 +284,12 @@ router.post("/signup", async (req, res) => {
 </html>
           `,
         });
+        
+        if (error) {
+          console.log("Error sending email via Resend:", error.message)
+          return res.status(401).json({ message: `Error sending email: ${ error.message}` });
+        }
+        
         console.log("Email sent successfully!")
       } catch (error) {
         console.log("Error sending email:", error.message)
