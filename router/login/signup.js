@@ -17,6 +17,11 @@ router.post("/signup", async (req, res) => {
       const {ferstname, lastname, phoneNumber, username, email, password, deviceId} = req.body;
       if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId) return res.status(401).json({message: "Verify the entered information"})
       const user = await Users.findOne({email})
+
+      if(user && user.VerificaionStatus === "verified"){
+        return res.status(401).json({message: "ensure the courag of the entered information"})
+      }
+
       const IpBanRecord = await BlockedIps.findOne({deviceId: deviceId})
       
       if(IpBanRecord){
@@ -25,18 +30,22 @@ router.post("/signup", async (req, res) => {
         }
       }
 
+
+
       console.log(req.ip)
       let currentAttempts = 0;
 
       if(user) {
         const blockedIps = await BlockedIps.findOne({userID: user._id})
          if(blockedIps){
+
           if(blockedIps.StateBan === "permanent-baned" || blockedIps.BannedCount >= 3) {
             blockedIps.StateBan="permanent-baned"
             blockedIps.banneDate=Date.now()
             await blockedIps.save()
             return res.status(401).json({message: "You are permanently banned on this device."})
           }
+
           if(blockedIps.StateBan === "baned"){
             if((blockedIps.banneDate.getTime() + 10 * 60 * 1000) > Date.now()){
               return res.status(401).json({message: "This account is temporarily suspended; please wait until the suspension period ends."})
@@ -64,9 +73,6 @@ router.post("/signup", async (req, res) => {
             }          
          }
 
-        if(user.VerificaionStatus === "verified"){
-           return res.status(401).json({message: "ensure the courag of the entered information"})
-        }
 
         if (user.lockUntil && user.lockUntil > Date.now()) {
           const {captchaToken} = req.body
@@ -331,7 +337,8 @@ router.delete("/filedAuth/:userId", filedAuth, async (req, res) => {
   try{
     const {email} = req.query;
     const {userId} = req.params;
-    if(!email || !userId) return res.status(401).json({message: "Verify the entered information"})
+    console.log("Query:", req.query, "Params:", req.params);
+    if(!email || !userId) return res.status(401).json({message: `Verify the entered information. Email received: ${email}, UserID received: ${userId}`})
     const User = await Users.findOne({_id: userId})
     if(!User) return res.status(401).json({message: "This account does not exist"})
     const blockedIps = await BlockedIps.findOne({userID: User._id})
@@ -353,8 +360,8 @@ router.patch("/filedAuthSecret/:userId", filedAuth, async (req, res) => {
   try{
     const {email} = req.body;
     const {userId} = req.params;
-    console.log(email, userId)
-    if(!email || !userId) return res.status(401).json({message: "Verify the entered information"})
+    console.log("Body:", req.body, "Params:", req.params);
+    if(!email || !userId) return res.status(401).json({message: `Verify the entered information. Email received: ${email}, UserID received: ${userId}`})
     const User = await Users.findOne({_id: userId})
     if(!User) return res.status(401).json({message: "This account does not exist"})      
     const blockedIps = await BlockedIps.findOne({userID: User._id})
