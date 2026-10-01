@@ -15,7 +15,7 @@ const router = express.Router()
 router.post("/signup", async (req, res) => {
     try{
       const {ferstname, lastname, phoneNumber, username, email, password, deviceId} = req.body;
-      if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId) return res.status(401).json({message: "Verify the entered information"})
+      if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId) return res.status(401).json({message: "Verify the entered information (form)"})
       const user = await Users.findOne({email})
 
       if(user && user.VerificaionStatus === "verified"){
