@@ -7,9 +7,11 @@ cron.schedule("*/30 * * * *", async () => {
         const bannedRecords = await BlockedIps.find({ StateBan: { $in: ['baned', 'permanent-baned'] } }).select('userID');
         const bannedUserIds = bannedRecords.map(record => record.userID);
 
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
         const result = await Users.deleteMany({
             isVerify: false,
             VerificaionStatus: "notVerify",
+            createdAt: { $lte: thirtyMinutesAgo },
             _id: { $nin: bannedUserIds }
         });
 

@@ -69,6 +69,12 @@ const usersSchema = mongoose.Schema({
   birthDate: {
     type: Date,
   },
-})
+  ipAddress: {
+    type: String,
+  },
+  deviceId: {
+    type: String,
+  }
+}, { timestamps: true })
 
 export const Users = mongoose.model("User", usersSchema);

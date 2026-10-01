@@ -10,6 +10,9 @@ const BlockedIpsSchema = mongoose.Schema({
       type: String,
       required: true,
     },
+    ipAddress: {
+      type: String,
+    },
     resson: {
       type: String,
     },

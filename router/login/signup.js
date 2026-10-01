@@ -9,25 +9,62 @@ import filedAuth from "../../middleware/filedAuth.js"
 import { BlockedIps } from "../../schema/blockedIps.js"
 import { verifyCaptchaToken } from "../../jobs/verifyCapchaToken.js"
 import { Resend } from "resend";
-
 const router = express.Router()
 
 router.post("/signup", async (req, res) => {
     try{
       const {ferstname, lastname, phoneNumber, username, email, password, deviceId} = req.body;
       if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId) return res.status(401).json({message: "Verify the entered information (form)"})
+      
+      const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+
+      // -- Spam Protection (Prevent deviceId spoofing) --
+      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+      const recentAccounts30 = await Users.find({
+        ipAddress: clientIp,
+        createdAt: { $gte: thirtyMinutesAgo }
+      }).sort({ createdAt: -1 });
+
+      let isSpamBlock = false;
+      if (recentAccounts30.length >= 5) {
+         for (let i = 0; i <= recentAccounts30.length - 5; i++) {
+             if (recentAccounts30[i].createdAt && recentAccounts30[i+4].createdAt) {
+                 const newest = recentAccounts30[i].createdAt.getTime();
+                 const oldest = recentAccounts30[i+4].createdAt.getTime();
+                 if ((newest - oldest) <= 10 * 60 * 1000) {
+                     isSpamBlock = true;
+                     break;
+                 }
+             }
+         }
+      }
+
+      if (isSpamBlock) {
+          const accountIds = recentAccounts30.map(acc => acc._id);
+          await Users.updateMany(
+              { _id: { $in: accountIds } },
+              { $set: { VerificaionStatus: "notVerify" } }
+          );
+          return res.status(401).json({ message: "Creating new accounts from this device has been blocked for 30 minutes due to suspicious activity (Spam Protection)." });
+      }
+      // -- End Spam Protection --
+
       const user = await Users.findOne({email})
 
       if(user && user.VerificaionStatus === "verified"){
         return res.status(401).json({message: "ensure the courag of the entered information"})
       }
 
-      const IpBanRecord = await BlockedIps.findOne({deviceId: deviceId})
+      const IpBanRecord = await BlockedIps.findOne({
+        $or: [
+          { deviceId: deviceId },
+          { ipAddress: clientIp }
+        ],
+        StateBan: "permanent-baned"
+      });
       
       if(IpBanRecord){
-        if(IpBanRecord.StateBan === "permanent-baned"){
-          return res.status(401).json({message: "You are permanently banned on this device."})
-        }
+         return res.status(401).json({message: "Your device or network is permanently banned."})
       }
 
 
@@ -43,7 +80,7 @@ router.post("/signup", async (req, res) => {
             blockedIps.StateBan="permanent-baned"
             blockedIps.banneDate=Date.now()
             await blockedIps.save()
-            return res.status(401).json({message: "You are permanently banned on this device."})
+            return res.status(401).json({message: "You are permanently banned on this device. 2"})
           }
 
           if(blockedIps.StateBan === "baned"){
@@ -83,6 +120,7 @@ router.post("/signup", async (req, res) => {
                   {
                       $set: {
                           deviceId: deviceId,
+                          ipAddress: clientIp,
                           resson: "Maximum number of attempts reached (temporay ban)",
                           banneDate: Date.now()
                       },
@@ -113,6 +151,7 @@ router.post("/signup", async (req, res) => {
               {
                 $set: {
                   deviceId: deviceId,
+                  ipAddress: clientIp,
                   resson: "Invallid Verification Token (Permanent ban)",
                   banneDate: Date.now(),
                   StateBan: "permanent-baned"
@@ -156,6 +195,8 @@ router.post("/signup", async (req, res) => {
         AttemptsCount: newAttemptsCount,
         lockUntil: newLockUntil,
         password: hashedPassword,
+        ipAddress: clientIp,
+        deviceId: deviceId,
       }
       let userData;
       if(user){
@@ -332,6 +373,8 @@ router.post("/signup", async (req, res) => {
         return res.status(500).json({message: `An error occurred while creating the account" ${err}`})
     }
 })
+
+
 
 router.delete("/filedAuth/:userId", filedAuth, async (req, res) => {
   try{
