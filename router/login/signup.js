@@ -295,7 +295,7 @@ router.post("/signup", async (req, res) => {
         console.log("Email sent successfully!")
       } catch (error) {
         console.log("Error sending email:", error.message)
-        return res.status(400).json({ error: error.message });
+        return res.status(401).json({ message: `Error sending email: ${ error.message}` });
       }
       console.log("Generating access token...")
       const accessToken = jwt.sign(
