@@ -13,41 +13,33 @@ const router = express.Router()
 
 router.post("/signup", async (req, res) => {
     try{
-      const {ferstname, lastname, phoneNumber, username, email, password, deviceId} = req.body;
-      if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId) return res.status(401).json({message: "Verify the entered information (form)"})
+      const {ferstname, lastname, phoneNumber, username, email, password, deviceId, captchaToken} = req.body;
+      
+      // 1. Protect against empty or missing CAPTCHA and form data
+      if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId || !captchaToken) {
+          return res.status(401).json({message: "Verify the entered information (form and captcha are required)"});
+      }
       
       const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
 
-      // -- Spam Protection (Prevent deviceId spoofing) --
-      const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-      const recentAccounts30 = await Users.find({
-        ipAddress: clientIp,
-        createdAt: { $gte: thirtyMinutesAgo }
-      }).sort({ createdAt: -1 });
-
-      let isSpamBlock = false;
-      if (recentAccounts30.length >= 5) {
-         for (let i = 0; i <= recentAccounts30.length - 5; i++) {
-             if (recentAccounts30[i].createdAt && recentAccounts30[i+4].createdAt) {
-                 const newest = recentAccounts30[i].createdAt.getTime();
-                 const oldest = recentAccounts30[i+4].createdAt.getTime();
-                 if ((newest - oldest) <= 10 * 60 * 1000) {
-                     isSpamBlock = true;
-                     break;
-                 }
-             }
-         }
-      }
-
-      if (isSpamBlock) {
-          const accountIds = recentAccounts30.map(acc => acc._id);
-          await Users.updateMany(
-              { _id: { $in: accountIds } },
-              { $set: { VerificaionStatus: "notVerify" } }
+      // 2. Verify CAPTCHA on EVERY signup request
+      const isHuman = await verifyCaptchaToken(captchaToken);
+      if (!isHuman) {
+          await BlockedIps.findOneAndUpdate(
+            { deviceId: deviceId },
+            {
+              $set: {
+                deviceId: deviceId,
+                ipAddress: clientIp,
+                resson: "Forged Captcha Token during Signup (Permanent ban)",
+                banneDate: Date.now(),
+                StateBan: "permanent-baned"
+              }
+            },
+            { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
           );
-          return res.status(401).json({ message: "Creating new accounts from this device has been blocked for 30 minutes due to suspicious activity (Spam Protection)." });
+          return res.status(401).json({message: "Your device has been permanently blocked due to suspicious activity."});
       }
-      // -- End Spam Protection --
 
       const user = await Users.findOne({email})
 
@@ -55,27 +47,22 @@ router.post("/signup", async (req, res) => {
         return res.status(401).json({message: "ensure the courag of the entered information"})
       }
 
-      const IpBanRecord = await BlockedIps.findOne({
-        $or: [
-          { deviceId: deviceId },
-          { ipAddress: clientIp }
-        ],
+      const deviceBanRecord = await BlockedIps.findOne({
+        deviceId: deviceId,
         StateBan: "permanent-baned"
       });
       
-      if(IpBanRecord){
-         return res.status(401).json({message: "Your device or network is permanently banned."})
+      if(deviceBanRecord){
+         return res.status(401).json({message: "Your device is permanently banned."})
       }
-
-
 
       console.log(req.ip)
       let currentAttempts = 0;
 
       if(user) {
-        const blockedIps = await BlockedIps.findOne({userID: user._id})
-         if(blockedIps){
-
+        let blockedIps = await BlockedIps.findOne({userID: user._id})
+         
+        if(blockedIps){
           if(blockedIps.StateBan === "permanent-baned" || blockedIps.BannedCount >= 3) {
             blockedIps.StateBan="permanent-baned"
             blockedIps.banneDate=Date.now()
@@ -93,86 +80,35 @@ router.post("/signup", async (req, res) => {
               await user.save()
             }
           }
+        }
 
-          if(blockedIps.StateBan === "not-baned" && user.AttemptsCount >= 10){
-              blockedIps.BannedCount+=1
-                if(blockedIps.BannedCount >= 3 ){
-                  blockedIps.StateBan = "permanent-baned";
-                  blockedIps.banneDate = Date.now()
-                  await blockedIps.save()
-                  return res.status(401).json({message: "You are permanently banned on this device."})
-                }else{
-                  blockedIps.StateBan="baned"
-                  blockedIps.banneDate=Date.now()
-                  await blockedIps.save()
-                  return res.status(401).json({message: "This account is temporarily suspended; please wait until the suspension period ends."});
-                }
-            }          
-         }
+        if (user.AttemptsCount >= 10) {
+            blockedIps = await BlockedIps.findOneAndUpdate(
+                { userID: user._id },
+                {
+                    $set: {
+                        deviceId: deviceId,
+                        ipAddress: clientIp,
+                        resson: "Maximum number of attempts reached (temporay ban)",
+                        banneDate: Date.now()
+                    },
+                    $inc: { BannedCount: 1 }
+                },
+                { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+            );
 
-
-        if (user.lockUntil && user.lockUntil > Date.now()) {
-          const {captchaToken} = req.body
-          if(!captchaToken) {
-            if(user.AttemptsCount >= 10) {
-              let ipRecord = await BlockedIps.findOneAndUpdate(
-                  { userID: user._id },
-                  {
-                      $set: {
-                          deviceId: deviceId,
-                          ipAddress: clientIp,
-                          resson: "Maximum number of attempts reached (temporay ban)",
-                          banneDate: Date.now()
-                      },
-                      $inc: { BannedCount: 1 }
-                  },
-                  { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-              );
-              if (ipRecord.BannedCount >= 3) {
-                  ipRecord.StateBan = "permanent-baned";
-              } else {
-                  ipRecord.StateBan = "baned";
-              }
-              await ipRecord.save();
-
-              return res.status(401).json({ message: "Access was denied. Please try again later." });
+            if (blockedIps.BannedCount >= 3) {
+                blockedIps.StateBan = "permanent-baned";
+                await blockedIps.save();
+                return res.status(401).json({ message: "You are permanently banned on this device." });
+            } else {
+                blockedIps.StateBan = "baned";
+                await blockedIps.save();
+                return res.status(401).json({ message: "This account is temporarily suspended; please wait until the suspension period ends." });
             }
-            user.AttemptsCount += 1
-            await user.save()
-            return res.status(428).json({
-            code: "CAPTCHA_REQUIRED",
-            message: `You have exhausted the allowed number of attempts; Please verify are human.`
-            });
-          }
-          const isHuman = await verifyCaptchaToken(captchaToken)
-          if(!isHuman) {
-            await BlockedIps.findOneAndUpdate(
-              { userID: user._id },
-              {
-                $set: {
-                  deviceId: deviceId,
-                  ipAddress: clientIp,
-                  resson: "Invallid Verification Token (Permanent ban)",
-                  banneDate: Date.now(),
-                  StateBan: "permanent-baned"
-                }
-              },
-              { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-            )
-            return res.status(401).json({message: "Your account and device have been permanently blocked due to suspicious activity"})
-          }
-          currentAttempts = 0;
-          user.lockUntil = undefined;
-          user.AttemptsCount = 0
         }
 
-        if (user.lockUntil && user.lockUntil <= Date.now()) {
-          currentAttempts = 0;
-          user.lockUntil = undefined;
-          user.AttemptsCount = 0
-        } else {
-            currentAttempts = user.AttemptsCount || 0;
-        }
+        currentAttempts = user.AttemptsCount || 0;
       }
 
       let newAttemptsCount = currentAttempts + 1;
@@ -421,6 +357,50 @@ router.patch("/filedAuthSecret/:userId", filedAuth, async (req, res) => {
   }catch(err){
     console.log("An error accurred while update the account: ", err)
     return res.status(500).json({message: "An error accurred while update the account: ", err})
+  }
+})
+
+router.post("/authCode/:userId", filedAuth, async (req, res) => {
+  try{
+    const {AuthCode, deviceId} = req.body
+    const {userId} = req.params;
+    const accessToken = req.headers.authorization;
+    if(!AuthCode || !deviceId || !userId) return res.status(401).json({message: "Make sure to enter all the required information."})
+      const user = await Users.findOne({_id: userId})
+      if(!user) return res.status(401).json({message: ""})
+      if(user && user.VerificaionStatus === "verified"){
+        return res.status(401).json({message: "ensure the courag of the entered information"})
+    }
+    const UserBaned = await BlockedIps.findOne({userID: userId})
+    if(UserBaned) {
+      if(UserBaned.StateBan !== "not-baned") return res.status(401).json({message: "This accunt is banned"})
+      if(UserBaned.deviceId !== deviceId) return res.status(401).json({message: "This code is not valid for this device."})
+    }
+    
+    if(Number(AuthCode) !== user.AuthCode) return res.status(401).json({message: "This code is incorrect. Please verify the code sent to this email."})
+    
+     const userData = await Users.findOneAndUpdate(
+      {_id: userId},
+      {$set: {VerificaionStatus: "verified"}},
+      {new: true}
+     )
+    
+     res.status(201).json({
+     message: "signup seccessfuly",
+     accessToken,
+     user:{
+        role: userData.role,
+        id: userData._id,
+        ferstname: userData.ferstname,
+        lastname: userData.lastname,
+        username: userData.username,
+        email: userData.email,
+        phoneNumber: userData.phoneNumber
+      }
+    })
+  }catch(err){
+    console.log("An issue accurred during the verification process:", err)
+    return res.status(500).json({message: `An issue accurred during the verification process: ${err}`})
   }
 })
 
