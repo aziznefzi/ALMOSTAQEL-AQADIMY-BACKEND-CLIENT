@@ -147,132 +147,133 @@ router.post("/signup", async (req, res) => {
       }else{
         userData = await Users.create(Data)
       }
-//       try {
-//         const { data, error } = await resend.emails.send({
-//           from: 'ALMOSTAEL AQADIMY <onboarding@resend.dev>', 
-//           to: email,
-//           subject: 'Welcome to ALMOSTAEL AQADIMY!',
-//           html: `
-// <!DOCTYPE html>
-// <html>
-// <head>
-//   <style>
-//     body {
-//       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-//       background-color: #07070f;
-//       color: #f0efff;
-//       margin: 0;
-//       padding: 40px 20px;
-//     }
-//     .container {
-//       max-width: 600px;
-//       margin: 0 auto;
-//       background-color: #13111c;
-//       border: 1px solid #1f1b2e;
-//       border-radius: 16px;
-//       overflow: hidden;
-//     }
-//     .header {
-//       background: linear-gradient(to right, #9333ea, #ec4899);
-//       padding: 30px 20px;
-//       text-align: center;
-//     }
-//     .header h1 {
-//       margin: 0;
-//       color: #ffffff;
-//       font-size: 24px;
-//       letter-spacing: 1px;
-//     }
-//     .content {
-//       padding: 40px 30px;
-//     }
-//     .greeting {
-//       font-size: 20px;
-//       font-weight: 600;
-//       margin-bottom: 20px;
-//     }
-//     .message {
-//       color: #cbd5e1;
-//       line-height: 1.6;
-//       margin-bottom: 30px;
-//     }
-//     .code-box {
-//       background-color: #07070f;
-//       border: 1px solid #1f1b2e;
-//       border-radius: 12px;
-//       padding: 20px;
-//       text-align: center;
-//       margin-bottom: 30px;
-//     }
-//     .code {
-//       font-size: 32px;
-//       font-weight: 700;
-//       color: #a855f7;
-//       letter-spacing: 8px;
-//       margin: 0;
-//     }
-//     .details {
-//       background-color: rgba(139, 92, 246, 0.05);
-//       border-left: 4px solid #8b5cf6;
-//       padding: 15px 20px;
-//       border-radius: 4px;
-//     }
-//     .details p {
-//       margin: 5px 0;
-//       color: #cbd5e1;
-//     }
-//     .details strong {
-//       color: #f0efff;
-//     }
-//     .footer {
-//       text-align: center;
-//       padding: 20px;
-//       color: #64748b;
-//       font-size: 12px;
-//       border-top: 1px solid #1f1b2e;
-//     }
-//   </style>
-// </head>
-// <body>
-//   <div class="container">
-//     <div class="header">
-//       <h1>ALMOSTAEL AQADIMY</h1>
-//     </div>
-//     <div class="content">
-//       <div class="greeting">Hello ${ferstname} ${lastname},</div>
-//       <div class="message">
-//         Welcome to ALMOSTAEL AQADIMY! We are thrilled to have you on board. Please use the verification code below to complete your registration.
-//       </div>
-//       <div class="code-box">
-//         <p style="margin-top: 0; color: #64748b; font-size: 14px; text-transform: uppercase;">Verification Code</p>
-//         <p class="code">${AuthCode}</p>
-//       </div>
-//       <div class="details">
-//         <p style="margin-top: 0; margin-bottom: 10px; font-weight: 600; color: #f0efff;">Your Account Details:</p>
-//         <p><strong>Username:</strong> ${username}</p>
-//         <p><strong>Phone:</strong> ${phoneNumber}</p>
-//       </div>
-//     </div>
-//     <div class="footer">
-//       &copy; ${new Date().getFullYear()} ALMOSTAEL AQADIMY. All rights reserved.<br>
-//       If you didn't request this email, please ignore it.
-//     </div>
-//   </div>
-// </body>
-// </html>
-//           `,
-//         });
+      try {
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        const { data, error } = await resend.emails.send({
+          from: 'almostaqel aQademy <contact@almostaqelaqademy.com>', 
+          to: email,
+          subject: 'Welcome to ALMOSTAEL AQADIMY!',
+          html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #07070f;
+      color: #f0efff;
+      margin: 0;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background-color: #13111c;
+      border: 1px solid #1f1b2e;
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .header {
+      background: linear-gradient(to right, #9333ea, #ec4899);
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0;
+      color: #ffffff;
+      font-size: 24px;
+      letter-spacing: 1px;
+    }
+    .content {
+      padding: 40px 30px;
+    }
+    .greeting {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+    .message {
+      color: #cbd5e1;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+    .code-box {
+      background-color: #07070f;
+      border: 1px solid #1f1b2e;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .code {
+      font-size: 32px;
+      font-weight: 700;
+      color: #a855f7;
+      letter-spacing: 8px;
+      margin: 0;
+    }
+    .details {
+      background-color: rgba(139, 92, 246, 0.05);
+      border-left: 4px solid #8b5cf6;
+      padding: 15px 20px;
+      border-radius: 4px;
+    }
+    .details p {
+      margin: 5px 0;
+      color: #cbd5e1;
+    }
+    .details strong {
+      color: #f0efff;
+    }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #64748b;
+      font-size: 12px;
+      border-top: 1px solid #1f1b2e;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>ALMOSTAEL AQADIMY</h1>
+    </div>
+    <div class="content">
+      <div class="greeting">Hello ${ferstname} ${lastname},</div>
+      <div class="message">
+        Welcome to ALMOSTAEL AQADIMY! We are thrilled to have you on board. Please use the verification code below to complete your registration.
+      </div>
+      <div class="code-box">
+        <p style="margin-top: 0; color: #64748b; font-size: 14px; text-transform: uppercase;">Verification Code</p>
+        <p class="code">${AuthCode}</p>
+      </div>
+      <div class="details">
+        <p style="margin-top: 0; margin-bottom: 10px; font-weight: 600; color: #f0efff;">Your Account Details:</p>
+        <p><strong>Username:</strong> ${username}</p>
+        <p><strong>Phone:</strong> ${phoneNumber}</p>
+      </div>
+    </div>
+    <div class="footer">
+      &copy; ${new Date().getFullYear()} ALMOSTAEL AQADIMY. All rights reserved.<br>
+      If you didn't request this email, please ignore it.
+    </div>
+  </div>
+</body>
+</html>
+          `,
+        });
         
-//         if (error) {
-//           console.log("Error sending email via Resend:", error.message)
-//           return res.status(401).json({ message: `Error sending email: ${ error.message}` });
-//         }
+        if (error) {
+          console.log("Error sending email via Resend:", error.message)
+          return res.status(401).json({ message: `Error sending email: ${ error.message}` });
+        }
         
-//         console.log("Email sent successfully!")
-//       } catch (error) {
-//         console.log("Error sending email:", error.message)
-//         return res.status(401).json({ message: `Error sending email: ${ error.message}` });
-//       }
+        console.log("Email sent successfully!")
+      } catch (error) {
+        console.log("Error sending email:", error.message)
+        return res.status(401).json({ message: `Error sending email: ${ error.message}` });
+      }
       const accessToken = jwt.sign(
         {
         userId: userData._id,
