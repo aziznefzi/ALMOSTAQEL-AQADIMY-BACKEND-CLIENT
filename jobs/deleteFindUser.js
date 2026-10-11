@@ -5,7 +5,7 @@ import { BlockedIps } from "../schema/blockedIps.js";
 cron.schedule("*/30 * * * *", async () => {
     try {
         const bannedRecords = await BlockedIps.find({ StateBan: { $in: ['baned', 'permanent-baned'] } }).select('userID');
-        const bannedUserIds = bannedRecords.map(record => record.userID);
+        const bannedUserIds = bannedRecords.map(record => record.userID).filter(Boolean);
 
         const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
         const result = await Users.deleteMany({

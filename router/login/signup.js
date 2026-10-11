@@ -9,6 +9,7 @@ import filedAuth from "../../middleware/filedAuth.js"
 import { BlockedIps } from "../../schema/blockedIps.js"
 import { verifyCaptchaToken } from "../../jobs/verifyCapchaToken.js"
 import { Resend } from "resend";
+import Sessions from "../../schema/sessions.js"
 const router = express.Router()
 
 router.post("/signup", async (req, res) => {
@@ -22,38 +23,86 @@ router.post("/signup", async (req, res) => {
       
       const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
 
+      const cleanEmail = email ? email.toLowerCase().trim() : "";
+
+      // 1.5 Check specific permanent bans:
+      // Type 1: Device ban (blocks this device from performing actions with this email/account)
+      // Type 2: Email ban (blocks this email across the entire platform on any device)
+      if (deviceId) {
+        const deviceBan = await BlockedIps.findOne({
+          deviceId: deviceId,
+          StateBan: "permanent-baned"
+        });
+        if (deviceBan) {
+          return res.status(403).json({ message: "Your device is permanently banned from performing any activity." });
+        }
+      }
+
+      if (cleanEmail) {
+        const emailBan = await BlockedIps.findOne({
+          email: cleanEmail,
+          StateBan: "permanent-baned"
+        });
+        if (emailBan) {
+          return res.status(403).json({ message: "This email is permanently banned across the platform on all devices." });
+        }
+      }
+
       // 2. Verify CAPTCHA on EVERY signup request
       const isHuman = await verifyCaptchaToken(captchaToken);
       if (!isHuman) {
-          await BlockedIps.findOneAndUpdate(
-            { deviceId: deviceId },
-            {
-              $set: {
-                deviceId: deviceId,
-                ipAddress: clientIp,
-                resson: "Forged Captcha Token during Signup (Permanent ban)",
-                banneDate: Date.now(),
-                StateBan: "permanent-baned"
-              }
-            },
-            { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
-          );
-          return res.status(401).json({message: "Your device has been permanently blocked due to suspicious activity."});
+          const banOps = [];
+
+          // 1. Device Ban Record
+          if (deviceId) {
+            banOps.push(
+              BlockedIps.findOneAndUpdate(
+                { deviceId: deviceId, banType: "device" },
+                {
+                  $set: {
+                    deviceId: deviceId,
+                    email: cleanEmail,
+                    ipAddress: clientIp,
+                    banType: "device",
+                    resson: "Forged Captcha Token during Signup - Device permanent ban",
+                    banneDate: Date.now(),
+                    StateBan: "permanent-baned"
+                  }
+                },
+                { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+              )
+            );
+          }
+
+          // 2. Global Email Ban Record
+          if (cleanEmail) {
+            banOps.push(
+              BlockedIps.findOneAndUpdate(
+                { email: cleanEmail, banType: "email" },
+                {
+                  $set: {
+                    email: cleanEmail,
+                    deviceId: deviceId,
+                    ipAddress: clientIp,
+                    banType: "email",
+                    resson: "Forged Captcha Token during Signup - Email permanent ban across platform",
+                    banneDate: Date.now(),
+                    StateBan: "permanent-baned"
+                  }
+                },
+                { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+              )
+            );
+          }
+
+          await Promise.all(banOps);
+          return res.status(403).json({message: "Your device and email have been permanently banned due to suspicious activity."});
       }
 
       const user = await Users.findOne({email})
 
       if(user && user.VerificaionStatus === "verified"){
         return res.status(401).json({message: "ensure the courag of the entered information"})
-      }
-
-      const deviceBanRecord = await BlockedIps.findOne({
-        deviceId: deviceId,
-        StateBan: "permanent-baned"
-      });
-      
-      if(deviceBanRecord){
-         return res.status(401).json({message: "Your device is permanently banned."})
       }
 
       console.log(req.ip)
@@ -142,7 +191,7 @@ router.post("/signup", async (req, res) => {
           {
             $set: Data,
           },
-          {returnDocument: "after"}
+          {new: true}
         )
       }else{
         userData = await Users.create(Data)
@@ -274,22 +323,29 @@ router.post("/signup", async (req, res) => {
         console.log("Error sending email:", error.message)
         return res.status(401).json({ message: `Error sending email: ${ error.message}` });
       }
-      const accessToken = jwt.sign(
-        {
+      const verificationToken = jwt.sign(
+       {
         userId: userData._id,
         email: userData.email,
         type: "email-verification"
-      },
+       },
       process.env.ACCESS_TOKEN,
-      {
+       {
         expiresIn: "15m"
-      }
-    )
-      return res.status(201).json({
+       }
+      )
 
+      const isProduction = process.env.NODE_ENV === "production";
+      res.cookie("verificationToken", verificationToken, {
+        httpOnly: true,
+        secure: isProduction,
+        sameSite: isProduction ? "none" : "lax",
+        maxAge: 15 * 60 * 1000,
+        path: "/"
+      })
+
+      return res.status(201).json({
         message: "user created seccessfly",
-        accessToken,
-        AuthCode,
         user:{
         id: userData._id,
         deviceId: deviceId,
@@ -308,7 +364,7 @@ router.post("/signup", async (req, res) => {
     }catch(err){
         console.log("An error occurred while creating the account", err)
         return res.status(500).json({message: `An error occurred while creating the account" ${err}`})
-    }
+    }  
 })
 
 
@@ -365,7 +421,6 @@ router.post("/authCode/:userId", filedAuth, async (req, res) => {
   try{
     const {AuthCode, deviceId} = req.body
     const {userId} = req.params;
-    const accessToken = req.headers.authorization;
     if(!AuthCode || !deviceId || !userId) return res.status(401).json({message: "Make sure to enter all the required information."})
       const user = await Users.findOne({_id: userId})
       if(!user) return res.status(401).json({message: ""})
@@ -378,17 +433,85 @@ router.post("/authCode/:userId", filedAuth, async (req, res) => {
       if(UserBaned.deviceId !== deviceId) return res.status(401).json({message: "This code is not valid for this device."})
     }
     
-    if(Number(AuthCode) !== user.AuthCode) return res.status(401).json({message: "This code is incorrect. Please verify the code sent to this email."})
+    console.log("Verifying AuthCode:", {
+      received: AuthCode,
+      expected: user.AuthCode,
+      userId: userId,
+      matches: String(AuthCode).trim() === String(user.AuthCode).trim()
+    });
+
+    if(String(AuthCode).trim() !== String(user.AuthCode).trim()) {
+      return res.status(401).json({message: "This code is incorrect. Please verify the code sent to this email."})
+    }
     
      const userData = await Users.findOneAndUpdate(
       {_id: userId},
-      {$set: {VerificaionStatus: "verified"}},
+      {$set: {VerificaionStatus: "verified", isVerify: true}},
       {new: true}
      )
     
+     const isProduction = process.env.NODE_ENV === "production";
+
+     res.clearCookie("verificationToken", {
+       httpOnly: true,
+       secure: isProduction,
+       sameSite: isProduction ? "none" : "lax",
+       path: "/"
+     });
+
+     const refreshToken = await jwt.sign(
+      {
+        userId: userData._id,
+        email: userData.email,
+        role: userData.role,
+        deviceId: deviceId,
+        type: "user-access"
+      },
+      process.env.REFRESH_TOKEN,
+      {
+        expiresIn: "39d"
+      }
+    )
+   
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+
+    const sessionData = {
+      userID: userData._id,
+      deviceId: deviceId,
+      ipAddress: clientIp,
+      refreshToken: refreshToken,
+      loginDate: new Date(),
+      logoutDate: null
+    }
+
+    await Sessions.create(sessionData)
+
+     const accessToken = jwt.sign(
+       {
+         userId: userData._id,
+         email: userData.email,
+         role: userData.role,
+         deviceId: deviceId,
+         type: "user-access"
+       },
+       process.env.ACCESS_TOKEN,
+       {
+         expiresIn: "7d"
+       }
+     );
+
+
+     res.cookie("accessToken", accessToken, {
+       httpOnly: true,
+       secure: isProduction,
+       sameSite: isProduction ? "none" : "lax",
+       maxAge: 7 * 24 * 60 * 60 * 1000,
+       path: "/"
+     });
+
+
      res.status(201).json({
      message: "signup seccessfuly",
-     accessToken,
      user:{
         role: userData.role,
         id: userData._id,

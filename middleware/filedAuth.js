@@ -1,17 +1,23 @@
 import jwt from "jsonwebtoken"
 const filedAuth = async (req, res, next) => {
     try{
-      const authHeader = req.headers.authorization;
-      if(!authHeader) return res.status(403).json({message: "Authorization header missing"})
-      const token = authHeader.split(" ")[1];
-      if(!token) res.status(403).json({message: "Token is missing"})
-      const accessToken = jwt.verify(token, process.env.ACCESS_TOKEN)
-      if(accessToken.type !== "email-verification") return res.status(403).json({message: "Invalid verification token"})
-      req.user = accessToken;
+      let token = req.cookies?.verificationToken || req.cookies?.accessToken;
+      if (!token && req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
+      }
+
+      if (!token) {
+        return res.status(403).json({ message: "Verification token missing" });
+      }
+
+      const decoded = jwt.verify(token, process.env.ACCESS_TOKEN)
+      if(decoded.type !== "email-verification") return res.status(403).json({message: "Invalid verification token"})
+      req.user = decoded;
       next()
     }catch(err){
         console.log("invalid or expired token: ", err)
-        return res.status(405).json(`invalid or expired token: ${err}`)
+        return res.status(405).json({ message: `invalid or expired token: ${err.message || err}` })
     }
 }
 
