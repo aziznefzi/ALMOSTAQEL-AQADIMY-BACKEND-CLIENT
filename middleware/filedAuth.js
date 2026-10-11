@@ -13,6 +13,13 @@ const filedAuth = async (req, res, next) => {
 
       const decoded = jwt.verify(token, process.env.ACCESS_TOKEN)
       if(decoded.type !== "email-verification") return res.status(403).json({message: "Invalid verification token"})
+      
+      // Device Binding Protection: Verify that the request is made from the authorized device
+      const incomingDeviceId = req.headers['x-device-id'] || req.headers['device-id'] || req.body?.deviceId || req.query?.deviceId;
+      if (decoded.deviceId && incomingDeviceId && decoded.deviceId !== incomingDeviceId) {
+        return res.status(403).json({ message: "Security alert: Token used from unauthorized device" });
+      }
+
       req.user = decoded;
       next()
     }catch(err){

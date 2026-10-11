@@ -327,6 +327,7 @@ router.post("/signup", async (req, res) => {
        {
         userId: userData._id,
         email: userData.email,
+        deviceId: deviceId,
         type: "email-verification"
        },
       process.env.ACCESS_TOKEN,
@@ -342,25 +343,26 @@ router.post("/signup", async (req, res) => {
         sameSite: isProduction ? "none" : "lax",
         maxAge: 15 * 60 * 1000,
         path: "/"
-      })
+      });
 
       return res.status(201).json({
         message: "user created seccessfly",
+        verificationToken: verificationToken,
         user:{
-        id: userData._id,
-        deviceId: deviceId,
-        role: userData.role,
-        ferstname: userData.ferstname,
-        lastname: userData.lastname,
-        username: userData.username,
-        email: userData.email,
-        AttemptsCount: userData.AttemptsCount,
-        phoneNumber: userData.phoneNumber,
-        VerificaionStatus: userData.VerificaionStatus,
-        ResendCount: userData.ResendCount,
-        VerificationCount: userData.VerificationCount
+          id: userData._id,
+          deviceId: deviceId,
+          role: userData.role,
+          ferstname: userData.ferstname,
+          lastname: userData.lastname,
+          username: userData.username,
+          email: userData.email,
+          AttemptsCount: userData.AttemptsCount,
+          phoneNumber: userData.phoneNumber,
+          VerificaionStatus: userData.VerificaionStatus,
+          ResendCount: userData.ResendCount,
+          VerificationCount: userData.VerificationCount
         }
-      })
+      });
     }catch(err){
         console.log("An error occurred while creating the account", err)
         return res.status(500).json({message: `An error occurred while creating the account" ${err}`})
@@ -511,17 +513,18 @@ router.post("/authCode/:userId", filedAuth, async (req, res) => {
 
 
      res.status(201).json({
-     message: "signup seccessfuly",
-     user:{
-        role: userData.role,
-        id: userData._id,
-        ferstname: userData.ferstname,
-        lastname: userData.lastname,
-        username: userData.username,
-        email: userData.email,
-        phoneNumber: userData.phoneNumber
-      }
-    })
+       message: "signup seccessfuly",
+       accessToken: accessToken,
+       user:{
+          role: userData.role,
+          id: userData._id,
+          ferstname: userData.ferstname,
+          lastname: userData.lastname,
+          username: userData.username,
+          email: userData.email,
+          phoneNumber: userData.phoneNumber
+        }
+     })
   }catch(err){
     console.log("An issue accurred during the verification process:", err)
     return res.status(500).json({message: `An issue accurred during the verification process: ${err}`})
