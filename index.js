@@ -18,10 +18,28 @@ app.use((err, req, res, next) => {
   }
   next();
 })
+const allowedOrigins = [
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "https://almostaqelaqademy.com",
+  "https://www.almostaqelaqademy.com",
+  "https://client.almostaqelaqademy.com",
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
-  credentials: true
-}))
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error("Not allowed by CORS"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
+app.options("*", cors());
 connectDB()
 
 const port = process.env.PORT || 3000
