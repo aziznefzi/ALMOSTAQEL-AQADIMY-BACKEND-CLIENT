@@ -3,6 +3,7 @@ import { Services } from "../schema/svrisesSheme.js";
 import { BlockedIps } from "../schema/blockedIps.js";
 import { verifyCaptchaToken } from "../jobs/verifyCapchaToken.js";
 import { Resend } from "resend";
+import { getMsg } from "../utils/messages.js";
 
 const router = express.Router();
 
@@ -428,7 +429,7 @@ router.post("/services", async (req, res) => {
       !captchaToken
     ) {
       return res.status(400).json({
-        message: "Verify the entered information (form and captcha are required)",
+        message: getMsg("requiredFields", req),
       });
     }
 
@@ -447,8 +448,7 @@ router.post("/services", async (req, res) => {
       });
       if (isDeviceBanned) {
         return res.status(403).json({
-          message:
-            "Your device is permanently banned from performing any activity on this platform.",
+          message: getMsg("devicePermanentBan", req),
         });
       }
     }
@@ -461,8 +461,7 @@ router.post("/services", async (req, res) => {
       });
       if (isEmailBanned) {
         return res.status(403).json({
-          message:
-            "This email is permanently banned from being used on this platform on any device.",
+          message: getMsg("emailPermanentBan", req),
         });
       }
     }
@@ -518,8 +517,7 @@ router.post("/services", async (req, res) => {
       await Promise.all(banOps);
 
       return res.status(403).json({
-        message:
-          "Your device and email have been permanently blocked due to suspicious activity.",
+        message: getMsg("forgedCaptcha", req),
       });
     }
 
@@ -541,7 +539,7 @@ router.post("/services", async (req, res) => {
     try {
       if (process.env.RESEND_API_KEY) {
         const resend = new Resend(process.env.RESEND_API_KEY);
-        const isEn = lang === "en";
+        const isEn = (lang || req.headers['x-lang'] || req.headers['accept-language'] || "").toLowerCase().includes("en");
         const emailSubject = isEn
           ? `Service Request Received - ${String(subject).trim()} | almostaqel aQademy`
           : `تم استلام طلب الخدمة بنجاح | almostaqel aQademy - ${String(subject).trim()}`;
@@ -557,7 +555,7 @@ router.post("/services", async (req, res) => {
             details: String(details).trim(),
             budget: budget ? String(budget).trim() : "",
             phone: String(phone).trim(),
-            lang: lang || "ar",
+            lang: isEn ? "en" : "ar",
           }),
         });
 
@@ -574,7 +572,7 @@ router.post("/services", async (req, res) => {
     // 6. Respond with Success
     return res.status(201).json({
       success: true,
-      message: "Your service request has been submitted successfully.",
+      message: getMsg("serviceSuccess", req),
       data: {
         id: serviceRecord._id,
         createdAt: serviceRecord.createdAt,
@@ -583,7 +581,7 @@ router.post("/services", async (req, res) => {
   } catch (error) {
     console.error("Error in /services endpoint:", error);
     return res.status(500).json({
-      message: "Internal server error. Please try again later.",
+      message: getMsg("serverError", req),
     });
   }
 });

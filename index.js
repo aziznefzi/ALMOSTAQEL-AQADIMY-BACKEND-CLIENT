@@ -9,12 +9,13 @@ import servicesRouter from "./services/Services.js"
 import connectDB from "./config/db.js"
 import "./jobs/deleteFindUser.js"
 import cookieParser from "cookie-parser"
+import { getMsg } from "./utils/messages.js"
 const app = express()
 app.use(cookieParser())
 app.use(express.json())
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
-    return res.status(400).json({ message: "Data sent is not valid JSON. Please check the request body formatting." });
+    return res.status(400).json({ message: getMsg("invalidJson", req) });
   }
   next();
 })
@@ -37,7 +38,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
 }));
 connectDB()
 

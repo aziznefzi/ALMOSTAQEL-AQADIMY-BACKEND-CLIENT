@@ -55,7 +55,15 @@ const usersSchema = mongoose.Schema({
   lockUntil: {
     type: Date,
     default: null
-},
+  },
+  resendLockUntil: {
+    type: Date,
+    default: null
+  },
+  resendWindowStart: {
+    type: Date,
+    default: null
+  },
   VerificaionStatus: {
     type: String,
     default: "notVerify",
@@ -74,6 +82,11 @@ const usersSchema = mongoose.Schema({
   },
   deviceId: {
     type: String,
+  },
+  lang: {
+    type: String,
+    default: "en",
+    enum: ['en', 'ar']
   }
 }, { timestamps: true })
 
