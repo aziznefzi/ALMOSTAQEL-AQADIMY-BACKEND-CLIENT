@@ -46,3 +46,4 @@ const BlockedIpsSchema = mongoose.Schema({
 }, { timestamps: true })
 
 export const BlockedIps = mongoose.model("BlockedIp", BlockedIpsSchema)
+export default BlockedIps;

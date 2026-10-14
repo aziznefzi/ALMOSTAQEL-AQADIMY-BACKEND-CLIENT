@@ -13,7 +13,7 @@ import Sessions from "../../schema/sessions.js"
 import { getMsg, getResendLockMsg, getEmailSendErrorMsg, getLang } from "../../utils/messages.js"
 const router = express.Router()
 
-const getVerificationEmailContent = ({ type = "welcome", lang = "en", ferstname, lastname, username, email, phoneNumber, code }) => {
+export const getVerificationEmailContent = ({ type = "welcome", lang = "en", ferstname, lastname, username, email, phoneNumber, code }) => {
   const isAr = String(lang).toLowerCase().includes("ar");
   const fullName = `${ferstname || ""} ${lastname || ""}`.trim();
 
@@ -389,15 +389,23 @@ router.post("/signup", async (req, res) => {
           return res.status(403).json({ message: getMsg("forgedCaptcha", req) });
       }
 
-      const user = await Users.findOne({email})
+      // Check if user already exists
+      const user = await Users.findOne({
+        $or: [
+          { email: cleanEmail },
+          { email: email }
+        ]
+      });
 
-      if(user && user.VerificaionStatus === "verified"){
+      // If account is already verified, alert user that the account already exists and is verified
+      if(user && (user.VerificaionStatus === "verified" || user.isVerify === true)){
         return res.status(401).json({ message: getMsg("alreadyVerified", req, user) });
       }
 
       console.log(req.ip)
       let currentAttempts = 0;
 
+      // Spam Attack Protection: Protect against repeated signup spam on unverified accounts
       if(user) {
         let blockedIps = await BlockedIps.findOne({userID: user._id})
          
@@ -463,7 +471,7 @@ router.post("/signup", async (req, res) => {
         ferstname,
         lastname,
         username,
-        email,
+        email: cleanEmail,
         AuthCode,
         phoneNumber,
         VerificaionStatus: "check",
@@ -478,7 +486,7 @@ router.post("/signup", async (req, res) => {
       if(user){
         console.log("Updating existing user...")
         userData = await Users.findOneAndUpdate(
-          {email: email},
+          { _id: user._id },
           {
             $set: Data,
           },
@@ -544,6 +552,7 @@ router.post("/signup", async (req, res) => {
         verificationToken: verificationToken,
         user:{
           id: userData._id,
+          email: userData.email,
           deviceId: deviceId,
           role: userData.role,
           ferstname: userData.ferstname,
@@ -721,7 +730,9 @@ router.post("/authCode/:userId", filedAuth, async (req, res) => {
           lastname: userData.lastname,
           username: userData.username,
           email: userData.email,
-          phoneNumber: userData.phoneNumber
+          phoneNumber: userData.phoneNumber,
+          avatar: userData.avatar || "",
+          VerificaionStatus: userData.VerificaionStatus || "verified"
         }
      })
   }catch(err){

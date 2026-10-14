@@ -45,8 +45,20 @@ export const messages = {
     en: "This account does not exist."
   },
   alreadyVerified: {
-    ar: "تم تأكيد هذا الحساب وتفعيله مسبقاً.",
-    en: "This account has already completed verification."
+    ar: "هذا الحساب موجود بالفعل.",
+    en: "This account already exists."
+  },
+  accountAlreadyExists: {
+    ar: "هذا الحساب موجود بالفعل.",
+    en: "This account already exists."
+  },
+  emailAlreadyExists: {
+    ar: "البريد الإلكتروني مسجل بالفعل.",
+    en: "This email is already registered."
+  },
+  usernameAlreadyExists: {
+    ar: "اسم المستخدم هذا مستخدم بالفعل. يرجى اختيار اسم مستخدم آخر.",
+    en: "This username is already taken. Please choose another username."
   },
   emailMismatch: {
     ar: "تنبيه أمني: البريد الإلكتروني المدخل لا يتطابق مع الحساب.",
@@ -107,6 +119,14 @@ export const messages = {
   verifySuccess: {
     ar: "تم التحقق وتسجيل الدخول بنجاح.",
     en: "Verification completed and signed in successfully."
+  },
+  loginSuccess: {
+    ar: "تم تسجيل الدخول بنجاح.",
+    en: "Signed in successfully."
+  },
+  invalidCredentials: {
+    ar: "بيانات الدخول غير صحيحة. يرجى التأكد من البريد وكلمة المرور.",
+    en: "Invalid credentials. Please check your email and password."
   },
   userDeletedSuccess: {
     ar: "تم حذف الحساب بنجاح.",

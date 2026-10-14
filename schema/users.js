@@ -10,27 +10,45 @@ const usersSchema = mongoose.Schema({
   ferstname: {
     type: String,
     required: true,
-    minLength: 3,
-    maxLength: 10
+    minLength: 1,
+    maxLength: 50
   },
   lastname: {
     type: String,
-    required: true,
-    minLength: 3,
-    maxLength: 10
+    required: false,
+    default: "",
+    maxLength: 50
   },
   username: {
     type: String,
     required: true,
-    maxLength: 15
+    maxLength: 50
   },
   email: {
     type: String,
     required: true,
   },
+  password: {
+    type: String,
+    required: false
+  },
+  googleId: {
+    type: String,
+    default: null
+  },
+  avatar: {
+    type: String,
+    default: ""
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
   AuthCode: {
     type: Number,
-    required: true,
+    required: false,
+    default: 0
   },
   isVerify: {
     type: Boolean,
@@ -40,17 +58,17 @@ const usersSchema = mongoose.Schema({
   ResendCount: {
     type: Number,
     default: 0,
-    require: true,
+    required: true,
   },
   VerificationCount: {
     type: Number,
     default: 0,
-    require: true,
+    required: true,
   },
   AttemptsCount: {
     type: Number,
     default: 0,
-    require: true,
+    required: true,
   },
   lockUntil: {
     type: Date,
@@ -68,11 +86,12 @@ const usersSchema = mongoose.Schema({
     type: String,
     default: "notVerify",
     enum: ['notVerify', 'check', "verified"],
-    require: true,
+    required: true,
   },
   PhoneNumber: {
     type: String,
-    require: true,
+    required: false,
+    default: ""
   },
   birthDate: {
     type: Date,
