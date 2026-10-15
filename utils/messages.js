@@ -147,6 +147,26 @@ export const messages = {
   serverError: {
     ar: "حدث خطأ في الخادم أثناء معالجة الطلب.",
     en: "A server error occurred while processing the request."
+  },
+  forgedToken: {
+    ar: "تم حظر جهازك بشكل دائم بسبب استخدام رمز مزور أو غير مصرح به.",
+    en: "Your device has been permanently banned due to the use of a forged or unauthorized token."
+  },
+  sessionExpired: {
+    ar: "انتهت صلاحية الجلسة، يرجى تسجيل الدخول مجدداً بكلمة المرور.",
+    en: "Session has expired, please sign in again with your password."
+  },
+  accountRemovedSuccess: {
+    ar: "تم حذف الحساب من هذا الجهاز بنجاح.",
+    en: "Account removed from this device successfully."
+  },
+  noAccountsFound: {
+    ar: "لا توجد حسابات مسجلة على هذا الجهاز.",
+    en: "No accounts found on this device."
+  },
+  switchAccountSuccess: {
+    ar: "تم التبديل وتسجيل الدخول بنجاح.",
+    en: "Switched and signed in successfully."
   }
 };
 

@@ -339,4 +339,300 @@ router.post("/logout", async (req, res) => {
   }
 });
 
+// ─────────────────────────────────────────────────────────────
+// 📱 Get accounts logged in on this specific device
+// ─────────────────────────────────────────────────────────────
+router.get("/device-accounts", async (req, res) => {
+  try {
+    const deviceId = req.query.deviceId || req.headers['x-device-id'] || req.headers['device-id'];
+
+    if (!deviceId) {
+      return res.status(400).json({ message: getMsg("deviceIdRequired", req), accounts: [] });
+    }
+
+    // 1. Check if device is permanently banned
+    const deviceBan = await BlockedIps.findOne({
+      deviceId: deviceId,
+      StateBan: "permanent-baned"
+    });
+    if (deviceBan) {
+      return res.status(403).json({ message: getMsg("devicePermanentBan", req), accounts: [] });
+    }
+
+    // 2. Fetch all sessions matching this deviceId
+    const sessions = await Sessions.find({ deviceId: deviceId }).sort({ updatedAt: -1, createdAt: -1 });
+
+    if (!sessions || sessions.length === 0) {
+      return res.status(200).json({ accounts: [] });
+    }
+
+    // 3. Keep latest session per unique user
+    const userSessionMap = new Map();
+    for (const s of sessions) {
+      const uid = String(s.userID);
+      if (!userSessionMap.has(uid)) {
+        userSessionMap.set(uid, s);
+      }
+    }
+
+    const accounts = [];
+
+    // 4. Validate each user & verify refreshToken
+    for (const [userId, session] of userSessionMap.entries()) {
+      const user = await Users.findById(userId);
+      if (!user) continue;
+
+      // Skip banned users
+      const userBan = await BlockedIps.findOne({
+        $or: [
+          { userID: user._id },
+          { email: user.email }
+        ],
+        StateBan: "permanent-baned"
+      });
+      if (userBan) continue;
+
+      // Validate refreshToken
+      try {
+        jwt.verify(session.refreshToken, process.env.REFRESH_TOKEN);
+
+        accounts.push({
+          userId: user._id,
+          ferstname: user.ferstname,
+          lastname: user.lastname || "",
+          username: user.username,
+          email: user.email,
+          avatar: user.avatar || "",
+          lastLogin: session.loginDate || session.createdAt
+        });
+      } catch (jwtErr) {
+        // If refreshToken expired, clean up session from DB
+        if (jwtErr.name === "TokenExpiredError") {
+          await Sessions.deleteMany({ userID: user._id, deviceId: deviceId });
+        }
+      }
+    }
+
+    return res.status(200).json({ accounts });
+  } catch (err) {
+    console.error("Get device accounts error:", err);
+    return res.status(500).json({ message: getMsg("serverError", req), accounts: [] });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 🔄 Switch Account with RefreshToken validation from DB & Ban Protection
+// ─────────────────────────────────────────────────────────────
+router.post("/switch-account", async (req, res) => {
+  try {
+    const { userId, deviceId, lang, refreshToken: incomingToken } = req.body || {};
+    const clientLang = (lang || req.headers['x-lang'] || req.headers['accept-language'] || "en").toLowerCase().includes("ar") ? "ar" : "en";
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
+
+    // 1. Validate required fields
+    if (!userId || !deviceId) {
+      return res.status(401).json({ message: getMsg("requiredFields", req) });
+    }
+
+    // 2. Check Device Permanent Ban
+    const deviceBan = await BlockedIps.findOne({
+      deviceId: deviceId,
+      StateBan: "permanent-baned"
+    });
+    if (deviceBan) {
+      return res.status(403).json({ message: getMsg("devicePermanentBan", req) });
+    }
+
+    // 3. Check Device Temporary Ban
+    const tempDeviceBan = await BlockedIps.findOne({
+      deviceId: deviceId,
+      StateBan: "baned"
+    });
+    if (tempDeviceBan && tempDeviceBan.banneDate && (tempDeviceBan.banneDate.getTime() + 10 * 60 * 1000) > Date.now()) {
+      return res.status(403).json({ message: getMsg("accountTempSuspension", req) });
+    }
+
+    // 4. Find user by userId
+    const user = await Users.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: getMsg("accountNotFound", req) });
+    }
+
+    // 5. Check User Bans
+    const userBan = await BlockedIps.findOne({
+      $or: [
+        { userID: user._id },
+        { email: user.email }
+      ]
+    });
+    if (userBan) {
+      if (userBan.StateBan === "permanent-baned" || userBan.BannedCount >= 3) {
+        return res.status(403).json({ message: getMsg("accountPermanentBan", req, user) });
+      }
+      if (userBan.StateBan === "baned") {
+        if (userBan.banneDate && (userBan.banneDate.getTime() + 10 * 60 * 1000) > Date.now()) {
+          return res.status(403).json({ message: getMsg("accountTempSuspension", req, user) });
+        }
+      }
+    }
+
+    // 6. Check lockUntil (temporary lockout)
+    if (user.lockUntil && user.lockUntil > new Date()) {
+      return res.status(403).json({ message: getMsg("accountTempSuspension", req, user) });
+    }
+
+    // 7. Check if user is verified
+    if (user.VerificaionStatus !== "verified" && user.isVerify !== true) {
+      return res.status(403).json({ message: getMsg("alreadyVerified", req, user) });
+    }
+
+    // 8. Find session in database for this user and device
+    const session = await Sessions.findOne({
+      userID: user._id,
+      deviceId: deviceId
+    }).sort({ updatedAt: -1, createdAt: -1 });
+
+    if (!session || !session.refreshToken) {
+      return res.status(401).json({ message: getMsg("tokenInvalid", req, user) });
+    }
+
+    // Security check: If request included an incoming refreshToken that doesn't match DB or is forged
+    if (incomingToken && incomingToken !== session.refreshToken) {
+      console.warn(`SECURITY ALERT: Forged refreshToken payload in request from IP: ${clientIp}, DeviceId: ${deviceId}`);
+      await BlockedIps.findOneAndUpdate(
+        { deviceId: deviceId, banType: "device" },
+        {
+          $set: {
+            deviceId: deviceId,
+            ipAddress: clientIp,
+            email: user.email,
+            userID: user._id,
+            banType: "device",
+            resson: "Forged or tampered refreshToken during switch account",
+            banneDate: Date.now(),
+            StateBan: "permanent-baned"
+          },
+          $inc: { BannedCount: 1 }
+        },
+        { upsert: true, returnDocument: 'after', setDefaultsOnInsert: true }
+      );
+      return res.status(403).json({ message: getMsg("forgedToken", req) });
+    }
+
+    // 9. Cryptographically verify the session's refreshToken from DB
+    let decoded;
+    try {
+      decoded = jwt.verify(session.refreshToken, process.env.REFRESH_TOKEN);
+    } catch (jwtErr) {
+      if (jwtErr.name === "TokenExpiredError") {
+        // Expired token -> remove session
+        await Sessions.deleteMany({ userID: user._id, deviceId: deviceId });
+        return res.status(401).json({
+          message: getMsg("sessionExpired", req, user),
+          sessionExpired: true
+        });
+      }
+
+      // Corrupted / tampered refreshToken in DB session
+      console.warn(`SECURITY ALERT: Invalid refreshToken in session for user: ${user._id}`);
+      await Sessions.deleteMany({ userID: user._id, deviceId: deviceId });
+      return res.status(401).json({ message: getMsg("tokenInvalid", req, user) });
+    }
+
+    // 10. Verify token claims match user and device
+    if (
+      String(decoded.userId) !== String(user._id) ||
+      String(decoded.deviceId) !== String(deviceId) ||
+      decoded.type !== "user-access"
+    ) {
+      console.warn(`SECURITY ALERT: Token claims mismatch during switch account from IP: ${clientIp}`);
+      await Sessions.deleteMany({ userID: user._id, deviceId: deviceId });
+      return res.status(403).json({ message: getMsg("tokenUserMismatch", req, user) });
+    }
+
+    // 11. Reset attempts, update user and session
+    user.AttemptsCount = 0;
+    user.lockUntil = null;
+    user.deviceId = deviceId;
+    user.ipAddress = clientIp;
+    if (user.lang !== clientLang) user.lang = clientLang;
+    await user.save();
+
+    session.loginDate = new Date();
+    session.logoutDate = null;
+    session.ipAddress = clientIp;
+    await session.save();
+
+    // 12. Generate fresh accessToken
+    const accessToken = jwt.sign(
+      {
+        userId: user._id,
+        email: user.email,
+        role: user.role,
+        deviceId: deviceId,
+        type: "user-access"
+      },
+      process.env.ACCESS_TOKEN,
+      { expiresIn: "7d" }
+    );
+
+    const isProduction = process.env.NODE_ENV === "production";
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/"
+    });
+
+    res.clearCookie("verificationToken", {
+      httpOnly: true,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/"
+    });
+
+    return res.status(200).json({
+      message: getMsg("switchAccountSuccess", req, user) || getMsg("loginSuccess", req, user),
+      accessToken,
+      user: {
+        id: user._id,
+        role: user.role,
+        ferstname: user.ferstname,
+        lastname: user.lastname,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar || "",
+        phoneNumber: user.PhoneNumber || "",
+        VerificaionStatus: user.VerificaionStatus
+      }
+    });
+
+  } catch (err) {
+    console.error("Switch account error:", err);
+    return res.status(500).json({ message: getMsg("serverError", req) });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────
+// 🗑️ Remove account from this device's sessions
+// ─────────────────────────────────────────────────────────────
+router.post("/remove-device-account", async (req, res) => {
+  try {
+    const { userId, deviceId } = req.body || {};
+
+    if (!userId || !deviceId) {
+      return res.status(400).json({ message: getMsg("requiredFields", req) });
+    }
+
+    await Sessions.deleteMany({ userID: userId, deviceId: deviceId });
+
+    return res.status(200).json({ message: getMsg("accountRemovedSuccess", req) });
+  } catch (err) {
+    console.error("Remove device account error:", err);
+    return res.status(500).json({ message: getMsg("serverError", req) });
+  }
+});
+
 export default router;
