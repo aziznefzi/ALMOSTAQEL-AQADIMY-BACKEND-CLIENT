@@ -8,6 +8,10 @@ export const messages = {
     ar: "يرجى التأكد من إدخال جميع المعلومات المطلوبة.",
     en: "Please verify that all required information is entered."
   },
+  passwordComplexity: {
+    ar: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل، وتحتوي على أحرف كبيرة وصغيرة وأرقام ورموز خاصة.",
+    en: "Password must be at least 8 characters long and contain uppercase letters, lowercase letters, numbers, and special symbols."
+  },
   captchaRequired: {
     ar: "يرجى تأكيد اختبار الكابتشا لإتمام عملية التسجيل.",
     en: "Please verify that you are not a robot to complete registration."

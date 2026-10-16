@@ -310,6 +310,17 @@ router.post("/signup", async (req, res) => {
       if(!ferstname || !lastname || !phoneNumber || !username || !email || !password || !deviceId || !captchaToken) {
           return res.status(401).json({ message: getMsg("requiredFields", req) });
       }
+
+      // 1.2 Enforce password complexity (uppercase, lowercase, number, symbol, min 8 chars)
+      const hasUpperCase = /[A-Z]/.test(password);
+      const hasLowerCase = /[a-z]/.test(password);
+      const hasNumber = /\d/.test(password);
+      const hasSymbol = /[^A-Za-z0-9]/.test(password);
+      const isLongEnough = typeof password === "string" && password.length >= 8;
+
+      if (!isLongEnough || !hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+        return res.status(400).json({ message: getMsg("passwordComplexity", req) });
+      }
       
       const clientIp = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress;
 

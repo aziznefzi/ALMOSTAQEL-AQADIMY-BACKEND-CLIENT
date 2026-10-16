@@ -106,6 +106,10 @@ const usersSchema = mongoose.Schema({
     type: String,
     default: "en",
     enum: ['en', 'ar']
+  },
+  forgotPasswordRequests: {
+    type: [Date],
+    default: []
   }
 }, { timestamps: true })
 

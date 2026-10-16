@@ -6,6 +6,7 @@ import cors from "cors"
 import login from "./router/login/login.js"
 import signup from "./router/login/signup.js"
 import googleAuth from "./router/login/googleAuth.js"
+import forgotPassword from "./router/login/forgotPassword.js"
 import servicesRouter from "./services/Services.js"
 import connectDB from "./config/db.js"
 import "./jobs/deleteFindUser.js"
@@ -47,6 +48,7 @@ const port = process.env.PORT || 3000
 app.use("/auth", login)
 app.use("/auth", signup)
 app.use("/auth", googleAuth)
+app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
 
 
