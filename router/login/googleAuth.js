@@ -20,35 +20,63 @@ router.post("/google", async (req, res) => {
 
     let googleUser = null;
 
-    if (credential) {
-      // Verify Google ID Token (JWT)
-      const ticket = await client.verifyIdToken({
-        idToken: credential,
-        audience: process.env.GOOGLE_CLIENT_ID,
-      });
-      const payload = ticket.getPayload();
-      if (!payload) {
-        return res.status(401).json({ message: "Invalid Google credential" });
+    try {
+      if (credential) {
+        // Verify Google ID Token (JWT)
+        const ticket = await client.verifyIdToken({
+          idToken: credential,
+          audience: process.env.GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        if (!payload) {
+          return res.status(401).json({ message: getMsg("invalidGoogleToken", req) });
+        }
+        googleUser = {
+          sub: payload.sub,
+          email: payload.email,
+          email_verified: payload.email_verified,
+          name: payload.name,
+          given_name: payload.given_name,
+          family_name: payload.family_name,
+          picture: payload.picture
+        };
+      } else if (googleToken) {
+        // Verify and fetch profile using Access Token
+        const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${googleToken}` },
+          timeout: 10000
+        });
+        googleUser = response.data;
       }
-      googleUser = {
-        sub: payload.sub,
-        email: payload.email,
-        email_verified: payload.email_verified,
-        name: payload.name,
-        given_name: payload.given_name,
-        family_name: payload.family_name,
-        picture: payload.picture
-      };
-    } else if (googleToken) {
-      // Verify and fetch profile using Access Token
-      const response = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${googleToken}` }
-      });
-      googleUser = response.data;
+    } catch (googleApiErr) {
+      console.error("Google API verification error:", googleApiErr);
+      const errMsg = (googleApiErr.message || "").toLowerCase();
+      const isNetworkErr = 
+        googleApiErr.code === 'ENOTFOUND' ||
+        googleApiErr.code === 'ETIMEDOUT' ||
+        googleApiErr.code === 'ECONNRESET' ||
+        googleApiErr.code === 'ECONNREFUSED' ||
+        googleApiErr.code === 'ENETUNREACH' ||
+        googleApiErr.code === 'EAI_AGAIN' ||
+        googleApiErr.code === 'ERR_NETWORK' ||
+        errMsg.includes('enotfound') ||
+        errMsg.includes('network') ||
+        errMsg.includes('timeout') ||
+        errMsg.includes('fetch failed');
+
+      if (isNetworkErr) {
+        return res.status(503).json({ message: getMsg("networkConnectionError", req) });
+      }
+
+      if (googleApiErr.response?.status === 401 || errMsg.includes("invalid token") || errMsg.includes("token used too late") || errMsg.includes("wrong number of segments")) {
+        return res.status(401).json({ message: getMsg("invalidGoogleToken", req) });
+      }
+
+      return res.status(400).json({ message: getMsg("googleAuthFailed", req) });
     }
 
     if (!googleUser || !googleUser.email) {
-      return res.status(400).json({ message: "Unable to retrieve Google user profile." });
+      return res.status(400).json({ message: getMsg("googleAuthFailed", req) });
     }
 
     if (googleUser.email_verified === false) {
@@ -212,6 +240,23 @@ router.post("/google", async (req, res) => {
 
   } catch (err) {
     console.error("Error in Google Auth:", err);
+    const errMsg = (err.message || "").toLowerCase();
+    const isNetworkErr = 
+      err.code === 'ENOTFOUND' ||
+      err.code === 'ETIMEDOUT' ||
+      err.code === 'ECONNRESET' ||
+      err.code === 'ECONNREFUSED' ||
+      err.code === 'ENETUNREACH' ||
+      err.code === 'EAI_AGAIN' ||
+      err.code === 'ERR_NETWORK' ||
+      err.name === 'MongooseServerSelectionError' ||
+      errMsg.includes('enotfound') ||
+      errMsg.includes('network') ||
+      errMsg.includes('timeout');
+
+    if (isNetworkErr) {
+      return res.status(503).json({ message: getMsg("networkConnectionError", req) });
+    }
     return res.status(500).json({ message: getMsg("serverError", req) });
   }
 });

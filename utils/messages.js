@@ -16,6 +16,26 @@ export const messages = {
     ar: "يرجى تأكيد اختبار الكابتشا لإتمام عملية التسجيل.",
     en: "Please verify that you are not a robot to complete registration."
   },
+  captchaExpired: {
+    ar: "انتهت صلاحية رمز التحقق (الكابتشا)، يرجى إعادة تأكيد الكابتشا والمحاولة مجدداً.",
+    en: "The captcha verification has expired. Please verify the captcha again."
+  },
+  captchaNetworkError: {
+    ar: "تعذر التحقق من الكابتشا بسبب مشكلة في الاتصال بالإنترنت. يرجى إعادة المحاولة.",
+    en: "Could not verify captcha due to a network connection issue. Please try again."
+  },
+  networkConnectionError: {
+    ar: "لديك مشكلة في الاتصال بالإنترنت، يرجى التحقق من اتصالك والمحاولة مجدداً.",
+    en: "You have an internet connection problem. Please check your connection and try again."
+  },
+  invalidGoogleToken: {
+    ar: "رمز تسجيل الدخول عبر Google غير صالح أو منتهي الصلاحية.",
+    en: "Google authentication token is invalid or expired."
+  },
+  googleAuthFailed: {
+    ar: "فشل تسجيل الدخول عبر Google. يرجى المحاولة مرة أخرى.",
+    en: "Google sign-in failed. Please try again."
+  },
   forgedCaptcha: {
     ar: "تم حظر جهازك وبريدك الإلكتروني بشكل دائم بسبب نشاط مشبوه.",
     en: "Your device and email have been permanently banned due to suspicious activity."

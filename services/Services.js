@@ -466,59 +466,68 @@ router.post("/services", async (req, res) => {
       }
     }
 
-    // 3. Verify Google reCAPTCHA Token
-    const isHuman = await verifyCaptchaToken(captchaToken);
-    if (!isHuman) {
-      // Security measure: Permanently ban both deviceId (Device ban) and email (Email ban across platform)
-      const banOps = [];
-
-      // 1. Device ban record: prevents any request from this device
-      if (cleanDeviceId) {
-        banOps.push(
-          BlockedIps.findOneAndUpdate(
-            { deviceId: cleanDeviceId, banType: "device" },
-            {
-              $set: {
-                deviceId: cleanDeviceId,
-                email: cleanEmail,
-                ipAddress: clientIp,
-                banType: "device",
-                resson: "Forged Captcha Token during Service Request - Device permanent ban",
-                banneDate: new Date(),
-                StateBan: "permanent-baned",
-              },
-            },
-            { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-          )
-        );
+    // 3. Verify Google reCAPTCHA Token (with network resilience, expiration detection, and forged ban protection)
+    const captchaResult = await verifyCaptchaToken(captchaToken);
+    if (!captchaResult.success) {
+      if (captchaResult.status === "network_error") {
+        return res.status(503).json({ message: getMsg("captchaNetworkError", req) });
       }
 
-      // 2. Email ban record: prevents this email from being used on any device
-      if (cleanEmail) {
-        banOps.push(
-          BlockedIps.findOneAndUpdate(
-            { email: cleanEmail, banType: "email" },
-            {
-              $set: {
-                email: cleanEmail,
-                deviceId: cleanDeviceId,
-                ipAddress: clientIp,
-                banType: "email",
-                resson: "Forged Captcha Token during Service Request - Email permanent ban across platform",
-                banneDate: new Date(),
-                StateBan: "permanent-baned",
-              },
-            },
-            { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-          )
-        );
+      if (captchaResult.status === "expired_or_duplicate") {
+        return res.status(400).json({ message: getMsg("captchaExpired", req) });
       }
 
-      await Promise.all(banOps);
+      if (captchaResult.status === "missing") {
+        return res.status(400).json({ message: getMsg("captchaRequired", req) });
+      }
 
-      return res.status(403).json({
-        message: getMsg("forgedCaptcha", req),
-      });
+      if (captchaResult.status === "forged") {
+        const banOps = [];
+        if (cleanDeviceId) {
+          banOps.push(
+            BlockedIps.findOneAndUpdate(
+              { deviceId: cleanDeviceId, banType: "device" },
+              {
+                $set: {
+                  deviceId: cleanDeviceId,
+                  email: cleanEmail,
+                  ipAddress: clientIp,
+                  banType: "device",
+                  resson: "Forged Captcha Token during Service Request - Device permanent ban",
+                  banneDate: new Date(),
+                  StateBan: "permanent-baned",
+                },
+              },
+              { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+            )
+          );
+        }
+
+        if (cleanEmail) {
+          banOps.push(
+            BlockedIps.findOneAndUpdate(
+              { email: cleanEmail, banType: "email" },
+              {
+                $set: {
+                  email: cleanEmail,
+                  deviceId: cleanDeviceId,
+                  ipAddress: clientIp,
+                  banType: "email",
+                  resson: "Forged Captcha Token during Service Request - Email permanent ban across platform",
+                  banneDate: new Date(),
+                  StateBan: "permanent-baned",
+                },
+              },
+              { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+            )
+          );
+        }
+
+        await Promise.all(banOps);
+        return res.status(403).json({ message: getMsg("forgedCaptcha", req) });
+      }
+
+      return res.status(400).json({ message: getMsg("captchaRequired", req) });
     }
 
     // 4. Save service request to Database

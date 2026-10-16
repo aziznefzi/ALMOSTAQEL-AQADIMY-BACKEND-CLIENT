@@ -45,54 +45,70 @@ router.post("/forgot-password/request", async (req, res) => {
       return res.status(403).json({ message: getMsg("emailPermanentBan", req) });
     }
 
-    // 4. ✅ Verify CAPTCHA on backend — permanent ban if forged
-    const isHuman = await verifyCaptchaToken(captchaToken);
-    if (!isHuman) {
-      const banOps = [];
-
-      if (deviceId) {
-        banOps.push(
-          BlockedIps.findOneAndUpdate(
-            { deviceId, banType: "device" },
-            {
-              $set: {
-                deviceId,
-                email: cleanEmail,
-                ipAddress: clientIp,
-                banType: "device",
-                resson: "Forged Captcha Token during Forgot Password — Device permanent ban",
-                banneDate: Date.now(),
-                StateBan: "permanent-baned",
-              },
-            },
-            { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-          )
-        );
+    // 4. ✅ Verify CAPTCHA on backend (network resilience, expiration detection, and forged ban protection)
+    const captchaResult = await verifyCaptchaToken(captchaToken);
+    if (!captchaResult.success) {
+      if (captchaResult.status === "network_error") {
+        return res.status(503).json({ message: getMsg("captchaNetworkError", req) });
       }
 
-      if (cleanEmail) {
-        banOps.push(
-          BlockedIps.findOneAndUpdate(
-            { email: cleanEmail, banType: "email" },
-            {
-              $set: {
-                email: cleanEmail,
-                deviceId,
-                ipAddress: clientIp,
-                banType: "email",
-                resson: "Forged Captcha Token during Forgot Password — Email permanent ban",
-                banneDate: Date.now(),
-                StateBan: "permanent-baned",
-              },
-            },
-            { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-          )
-        );
+      if (captchaResult.status === "expired_or_duplicate") {
+        return res.status(400).json({ message: getMsg("captchaExpired", req) });
       }
 
-      await Promise.all(banOps);
-      console.warn(`⚠️ SECURITY: Forged CAPTCHA in forgot-password from IP: ${clientIp}, Device: ${deviceId}, Email: ${cleanEmail}`);
-      return res.status(403).json({ message: getMsg("forgedCaptcha", req) });
+      if (captchaResult.status === "missing") {
+        return res.status(400).json({ message: getMsg("captchaRequired", req) });
+      }
+
+      if (captchaResult.status === "forged") {
+        const banOps = [];
+
+        if (deviceId) {
+          banOps.push(
+            BlockedIps.findOneAndUpdate(
+              { deviceId, banType: "device" },
+              {
+                $set: {
+                  deviceId,
+                  email: cleanEmail,
+                  ipAddress: clientIp,
+                  banType: "device",
+                  resson: "Forged Captcha Token during Forgot Password — Device permanent ban",
+                  banneDate: Date.now(),
+                  StateBan: "permanent-baned",
+                },
+              },
+              { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+            )
+          );
+        }
+
+        if (cleanEmail) {
+          banOps.push(
+            BlockedIps.findOneAndUpdate(
+              { email: cleanEmail, banType: "email" },
+              {
+                $set: {
+                  email: cleanEmail,
+                  deviceId,
+                  ipAddress: clientIp,
+                  banType: "email",
+                  resson: "Forged Captcha Token during Forgot Password — Email permanent ban",
+                  banneDate: Date.now(),
+                  StateBan: "permanent-baned",
+                },
+              },
+              { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+            )
+          );
+        }
+
+        await Promise.all(banOps);
+        console.warn(`⚠️ SECURITY: Forged CAPTCHA in forgot-password from IP: ${clientIp}, Device: ${deviceId}, Email: ${cleanEmail}`);
+        return res.status(403).json({ message: getMsg("forgedCaptcha", req) });
+      }
+
+      return res.status(400).json({ message: getMsg("captchaRequired", req) });
     }
 
     // 5. Find user by email

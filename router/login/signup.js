@@ -349,12 +349,27 @@ router.post("/signup", async (req, res) => {
         }
       }
 
-      // 2. Verify CAPTCHA on EVERY signup request
-      const isHuman = await verifyCaptchaToken(captchaToken);
-      if (!isHuman) {
-          const banOps = [];
+      // 2. Verify CAPTCHA on EVERY signup request (with network resilience, expiration detection, and forged ban protection)
+      const captchaResult = await verifyCaptchaToken(captchaToken);
+      if (!captchaResult.success) {
+        // Case A: Network connection / timeout failure (do NOT ban user)
+        if (captchaResult.status === "network_error") {
+          return res.status(503).json({ message: getMsg("captchaNetworkError", req) });
+        }
 
-          // 1. Device Ban Record
+        // Case B: Expired token or duplicate submission (do NOT ban user)
+        if (captchaResult.status === "expired_or_duplicate") {
+          return res.status(400).json({ message: getMsg("captchaExpired", req) });
+        }
+
+        // Case C: Missing captcha token (do NOT ban user)
+        if (captchaResult.status === "missing") {
+          return res.status(400).json({ message: getMsg("captchaRequired", req) });
+        }
+
+        // Case D: Deliberate Forged / Tampered Token -> Trigger Permanent Ban!
+        if (captchaResult.status === "forged") {
+          const banOps = [];
           if (deviceId) {
             banOps.push(
               BlockedIps.findOneAndUpdate(
@@ -375,7 +390,6 @@ router.post("/signup", async (req, res) => {
             );
           }
 
-          // 2. Global Email Ban Record
           if (cleanEmail) {
             banOps.push(
               BlockedIps.findOneAndUpdate(
@@ -398,6 +412,9 @@ router.post("/signup", async (req, res) => {
 
           await Promise.all(banOps);
           return res.status(403).json({ message: getMsg("forgedCaptcha", req) });
+        }
+
+        return res.status(400).json({ message: getMsg("captchaRequired", req) });
       }
 
       // Check if user already exists
@@ -527,14 +544,63 @@ router.post("/signup", async (req, res) => {
         });
         
         if (error) {
-          console.log("Error sending email via Resend:", error.message)
+          console.warn("Resend email failed, attempting Nodemailer Gmail fallback...", error.message);
+          if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            const transporter = nodemailer.createTransport({
+              service: "gmail",
+              port: 587,
+              secure: false,
+              auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+              },
+              tls: {
+                rejectUnauthorized: false
+              }
+            });
+            await transporter.sendMail({
+              from: `"أكاديمية المستقبل | Almostaqel Academy" <${process.env.EMAIL_USER}>`,
+              to: email,
+              subject: emailContent.subject,
+              html: emailContent.html,
+            });
+            console.log("Email sent successfully via Nodemailer fallback!");
+          } else {
+            return res.status(401).json({ message: getEmailSendErrorMsg(error.message, req) });
+          }
+        } else {
+          console.log("Email sent successfully via Resend!");
+        }
+      } catch (error) {
+        console.warn("Resend exception, attempting Nodemailer Gmail fallback...", error.message);
+        try {
+          if (process.env.EMAIL_USER && process.env.EMAIL_PASS) {
+            const transporter = nodemailer.createTransport({
+              service: "gmail",
+              port: 587,
+              secure: false,
+              auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+              },
+              tls: {
+                rejectUnauthorized: false
+              }
+            });
+            await transporter.sendMail({
+              from: `"أكاديمية المستقبل | Almostaqel Academy" <${process.env.EMAIL_USER}>`,
+              to: email,
+              subject: emailContent.subject,
+              html: emailContent.html,
+            });
+            console.log("Email sent successfully via Nodemailer fallback!");
+          } else {
+            return res.status(401).json({ message: getEmailSendErrorMsg(error.message, req) });
+          }
+        } catch (nmErr) {
+          console.error("Nodemailer fallback error:", nmErr.message);
           return res.status(401).json({ message: getEmailSendErrorMsg(error.message, req) });
         }
-        
-        console.log("Email sent successfully!")
-      } catch (error) {
-        console.log("Error sending email:", error.message)
-        return res.status(401).json({ message: getEmailSendErrorMsg(error.message, req) });
       }
       const verificationToken = jwt.sign(
        {

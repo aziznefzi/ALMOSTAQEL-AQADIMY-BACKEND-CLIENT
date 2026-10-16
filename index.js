@@ -8,13 +8,21 @@ import signup from "./router/login/signup.js"
 import googleAuth from "./router/login/googleAuth.js"
 import forgotPassword from "./router/login/forgotPassword.js"
 import servicesRouter from "./services/Services.js"
+import supportRouter from "./router/support/support.js"
 import connectDB from "./config/db.js"
 import "./jobs/deleteFindUser.js"
 import cookieParser from "cookie-parser"
+import path from "path"
+import { fileURLToPath } from "url"
 import { getMsg } from "./utils/messages.js"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
 const app = express()
 app.use(cookieParser())
 app.use(express.json())
+app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({ message: getMsg("invalidJson", req) });
@@ -50,6 +58,7 @@ app.use("/auth", signup)
 app.use("/auth", googleAuth)
 app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
+app.use("/api", supportRouter)
 
 
 app.listen(port, () => {
