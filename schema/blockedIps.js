@@ -5,7 +5,8 @@ const BlockedIpsSchema = mongoose.Schema({
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: false,
-      default: null
+      default: null,
+      alias: 'userId'
     },
     email: {
       type: String,
@@ -23,11 +24,13 @@ const BlockedIpsSchema = mongoose.Schema({
     },
     resson: {
       type: String,
-      default: ""
+      default: "",
+      alias: 'reason'
     },
     banneDate: {
       type: Date,
-      default: Date.now
+      default: Date.now,
+      alias: 'bannedDate'
     },
     BannedCount: {
       type: Number,
@@ -36,7 +39,8 @@ const BlockedIpsSchema = mongoose.Schema({
     StateBan: {
       type: String,
       default: "not-baned",
-      enum: ['not-baned', 'baned', 'permanent-baned']
+      enum: ['not-baned', 'baned', 'permanent-baned'],
+      alias: 'stateBan'
     },
     banType: {
       type: String,

@@ -172,7 +172,7 @@ router.post("/forgot-password/request", async (req, res) => {
 
       const subject = isAr
         ? "رمز استعادة كلمة المرور — أكاديمية المستقبل"
-        : "Password Recovery Code — ALMOSTAEL AQADIMY";
+        : "Password Recovery Code — ALMOSTAQEL AQADEMY";
 
       const html = isAr
         ? `<!DOCTYPE html>
@@ -221,7 +221,7 @@ router.post("/forgot-password/request", async (req, res) => {
   .footer{text-align:center;padding:20px;color:#64748b;font-size:12px;border-top:1px solid #1f1b2e}
 </style></head>
 <body><div class="container">
-<div class="header"><h1>ALMOSTAEL AQADIMY</h1></div>
+<div class="header"><h1>ALMOSTAQEL AQADEMY</h1></div>
 <div class="content">
   <div class="greeting">Hello ${fullName || user.username},</div>
   <div class="message">We received a request to recover access to your account. Use the code below to regain access.</div>
@@ -231,7 +231,7 @@ router.post("/forgot-password/request", async (req, res) => {
   </div>
   <p style="color:#94a3b8;font-size:13px">This code is valid for 3 minutes. If you did not request this, please ignore this email.</p>
 </div>
-<div class="footer">© ${new Date().getFullYear()} ALMOSTAEL AQADIMY. All rights reserved.</div>
+<div class="footer">© ${new Date().getFullYear()} ALMOSTAQEL AQADEMY. All rights reserved.</div>
 </div></body></html>`;
 
       await resend.emails.send({

@@ -4,7 +4,7 @@ const DeviceIdSaved = mongoose.Schema({
     deviceId: {
       type: String,
       required: true,
-      unque: true
+      unique: true
     },
     ipAddress: {
       type: String,
@@ -13,7 +13,7 @@ const DeviceIdSaved = mongoose.Schema({
     creationTime: {
       type: Date,
       required: true,
-      unque: true
+      default: Date.now
     },
     createDeviceCount: {
       type: Number,

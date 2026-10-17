@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const svrisesSchema = new mongoose.Schema(
+const servicesSchema = new mongoose.Schema(
   {
     name: {
       type: String,
@@ -56,5 +56,5 @@ const svrisesSchema = new mongoose.Schema(
   }
 );
 
-export const Services = mongoose.model("Service", svrisesSchema);
+export const Services = mongoose.models.Service || mongoose.model("Service", servicesSchema);
 export default Services;

@@ -1,5 +1,5 @@
 import express from "express";
-import { Services } from "../schema/svrisesSheme.js";
+import { Services } from "../schema/servicesSchema.js";
 import { BlockedIps } from "../schema/blockedIps.js";
 import { verifyCaptchaToken } from "../jobs/verifyCapchaToken.js";
 import { Resend } from "resend";

@@ -32,7 +32,7 @@ export const getVerificationEmailContent = ({ type = "welcome", lang = "en", fer
     const usernameLabel = "اسم المستخدم:";
     const phoneLabel = "رقم الهاتف:";
     const emailLabel = "البريد الإلكتروني:";
-    const footerText = `&copy; ${new Date().getFullYear()} أكاديمية المستقبل (ALMOSTAEL AQADIMY). جميع الحقوق محفوظة.<br>هذا الرمز صالح لمدة 15 دقيقة. إذا لم تكن قد طلبت هذا البريد الإلكتروني، يمكنك تجاهله بأمان.`;
+    const footerText = `&copy; ${new Date().getFullYear()} أكاديمية المستقبل (ALMOSTAQEL AQADEMY). جميع الحقوق محفوظة.<br>هذا الرمز صالح لمدة 15 دقيقة. إذا لم تكن قد طلبت هذا البريد الإلكتروني، يمكنك تجاهله بأمان.`;
 
     const html = `
 <!DOCTYPE html>
@@ -167,20 +167,20 @@ export const getVerificationEmailContent = ({ type = "welcome", lang = "en", fer
   } else {
     // English version
     const subject = type === "resend"
-      ? "New Verification Code - ALMOSTAEL AQADIMY"
-      : "Welcome to ALMOSTAEL AQADIMY - Verification Code";
+      ? "New Verification Code - ALMOSTAQEL AQADEMY"
+      : "Welcome to ALMOSTAQEL AQADEMY - Verification Code";
 
     const greeting = `Hello ${fullName || username},`;
     const message = type === "resend"
       ? "You requested to resend your verification code. Please use the new verification code below to complete your registration."
-      : "Welcome to ALMOSTAEL AQADIMY! We are thrilled to have you on board. Please use the verification code below to complete your registration.";
+      : "Welcome to ALMOSTAQEL AQADEMY! We are thrilled to have you on board. Please use the verification code below to complete your registration.";
 
     const codeTitle = type === "resend" ? "New Verification Code" : "Verification Code";
     const detailsTitle = "Account Details:";
     const usernameLabel = "Username:";
     const phoneLabel = "Phone:";
     const emailLabel = "Email:";
-    const footerText = `&copy; ${new Date().getFullYear()} ALMOSTAEL AQADIMY. All rights reserved.<br>This code is valid for 15 minutes. If you didn't request this email, please ignore it.`;
+    const footerText = `&copy; ${new Date().getFullYear()} ALMOSTAQEL AQADEMY. All rights reserved.<br>This code is valid for 15 minutes. If you didn't request this email, please ignore it.`;
 
     const html = `
 <!DOCTYPE html>
@@ -273,7 +273,7 @@ export const getVerificationEmailContent = ({ type = "welcome", lang = "en", fer
 <body>
   <div class="container">
     <div class="header">
-      <h1>ALMOSTAEL AQADIMY</h1>
+      <h1>ALMOSTAQEL AQADEMY</h1>
     </div>
     <div class="content">
       <div class="greeting">${greeting}</div>

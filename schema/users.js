@@ -11,7 +11,8 @@ const usersSchema = mongoose.Schema({
     type: String,
     required: true,
     minLength: 1,
-    maxLength: 50
+    maxLength: 50,
+    alias: 'firstname'
   },
   lastname: {
     type: String,
@@ -87,6 +88,7 @@ const usersSchema = mongoose.Schema({
     default: "notVerify",
     enum: ['notVerify', 'check', "verified"],
     required: true,
+    alias: 'verificationStatus'
   },
   PhoneNumber: {
     type: String,
