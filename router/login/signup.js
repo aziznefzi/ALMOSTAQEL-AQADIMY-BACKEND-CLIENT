@@ -169,7 +169,6 @@ export const getVerificationEmailContent = ({ type = "welcome", lang = "en", fer
     const subject = type === "resend"
       ? "New Verification Code - ALMOSTAQEL AQADEMY"
       : "Welcome to ALMOSTAQEL AQADEMY - Verification Code";
-
     const greeting = `Hello ${fullName || username},`;
     const message = type === "resend"
       ? "You requested to resend your verification code. Please use the new verification code below to complete your registration."
