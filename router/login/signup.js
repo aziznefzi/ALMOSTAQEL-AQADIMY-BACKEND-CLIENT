@@ -426,7 +426,22 @@ router.post("/signup", async (req, res) => {
 
       // If account is already verified, alert user that the account already exists and is verified
       if(user && (user.VerificaionStatus === "verified" || user.isVerify === true)){
-        return res.status(401).json({ message: getMsg("alreadyVerified", req, user) });
+        return res.status(401).json({ message: getMsg("alreadyVerified", req, user), field: "email" });
+      }
+
+      // Check username uniqueness if changed
+      const cleanUsername = username?.trim();
+      if (cleanUsername) {
+        if (!user || user.username?.toLowerCase() !== cleanUsername.toLowerCase()) {
+          const usernameRegex = new RegExp(`^${cleanUsername.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+          const existingUsername = await Users.findOne({
+            username: usernameRegex,
+            ...(user ? { _id: { $ne: user._id } } : {})
+          });
+          if (existingUsername) {
+            return res.status(400).json({ message: getMsg("usernameAlreadyExists", req, user), field: "username" });
+          }
+        }
       }
 
       console.log(req.ip)
@@ -497,7 +512,7 @@ router.post("/signup", async (req, res) => {
       const Data = {
         ferstname,
         lastname,
-        username,
+        username: cleanUsername || username,
         email: cleanEmail,
         AuthCode,
         phoneNumber,

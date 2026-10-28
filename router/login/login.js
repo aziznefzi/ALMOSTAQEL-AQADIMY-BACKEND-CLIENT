@@ -46,11 +46,12 @@ router.post("/login", async (req, res) => {
     const user = await Users.findOne({
       $or: [
         { email: cleanEmail },
-        { username: cleanEmail }
+        { username: cleanEmail },
+        { username: email.trim() }
       ]
     });
 
-    if (!user) {
+    if (!user || user.role === "admin") {
       return res.status(404).json({ message: getMsg("accountNotFound", req) });
     }
 

@@ -10,11 +10,21 @@ import forgotPassword from "./router/login/forgotPassword.js"
 import servicesRouter from "./services/Services.js"
 import supportRouter from "./router/support/support.js"
 import connectDB from "./config/db.js"
+import AdminLogin from "./Admin/Login.js"
 import "./jobs/deleteFindUser.js"
 import cookieParser from "cookie-parser"
 import path from "path"
 import { fileURLToPath } from "url"
 import { getMsg } from "./utils/messages.js"
+import getUsers from "./Admin/routes/Users/getUsers.js"
+import DeleteUser from "./Admin/routes/Users/DeleteUser.js"
+import UserBaned from "./Admin/routes/Users/UserBaned.js"
+import updateUsers from "./Admin/routes/Users/updateUsers.js"
+import mongoose from "mongoose"
+import bcrypt from "bcrypt"
+import { CreateAdminAccunt } from "./Admin/AminAccunt.js"
+import learningAdminRouter from "./Admin/routes/Learning/learning.js"
+import learningClientRouter from "./router/learning/learning.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -29,8 +39,11 @@ app.use((err, req, res, next) => {
   }
   next();
 })
+
+
 const allowedOrigins = [
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:3000",
   "https://almostaqelaqademy.com",
   "https://www.almostaqelaqademy.com",
@@ -50,17 +63,53 @@ app.use(cors({
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
 }));
+
+
+// if (mongoose.connection.readyState === 1) {
+//   CreateAdminAccunt();
+// } else {
+//   mongoose.connection.once("connected", () => {
+//     CreateAdminAccunt();
+//   });
+// }
+
 connectDB()
 
 const port = process.env.PORT || 3000
+
+//user router
 app.use("/auth", login)
 app.use("/auth", signup)
 app.use("/auth", googleAuth)
 app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
 app.use("/api", supportRouter)
-
+app.use("/api", learningClientRouter)
 
 app.listen(port, () => {
-   console.log(`server running is ${port}`)
+  console.log(`server running is ${port}`)
 })
+
+// // admin router: separate app, reachable only from localhost on a different port
+// const adminPort = process.env.ADMIN_PORT || 4000
+// const adminApp = express()
+// adminApp.use(cookieParser())
+// adminApp.use(express.json())
+// adminApp.use("/uploads", express.static(path.join(__dirname, "uploads")))
+// adminApp.use(cors({
+//   origin: ["http://localhost:5173", "http://localhost:5174"],
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
+// }))
+// adminApp.use("/admin/auth", AdminLogin)
+// adminApp.use("/admin/", getUsers)
+// adminApp.use("/admin/", DeleteUser)
+// adminApp.use("/admin/", UserBaned)
+// adminApp.use("/admin/", updateUsers)
+// adminApp.use("/admin/", learningAdminRouter)
+
+// // Bind to loopback only so the admin API is never exposed externally
+// adminApp.listen(adminPort, "127.0.0.1", () => {
+//   console.log(`admin server running on http://localhost:${adminPort}`)
+// })

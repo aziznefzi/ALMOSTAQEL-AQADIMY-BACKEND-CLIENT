@@ -45,9 +45,15 @@ const BlockedIpsSchema = mongoose.Schema({
     banType: {
       type: String,
       default: "all",
-      enum: ['device', 'email', 'all']
+      enum: ['device', 'email', 'all', 'ip']
     }
 }, { timestamps: true })
+
+// Indexes for fast ban lookups by userID, IP, device, and email
+BlockedIpsSchema.index({ userID: 1 });
+BlockedIpsSchema.index({ ipAddress: 1, banType: 1, StateBan: 1 });
+BlockedIpsSchema.index({ deviceId: 1, banType: 1, StateBan: 1 });
+BlockedIpsSchema.index({ email: 1, banType: 1, StateBan: 1 });
 
 export const BlockedIps = mongoose.model("BlockedIp", BlockedIpsSchema)
 export default BlockedIps;

@@ -75,6 +75,10 @@ const usersSchema = mongoose.Schema({
     type: Date,
     default: null
   },
+  blockedUntil: {
+    type: Date,
+    default: null
+  },
   resendLockUntil: {
     type: Date,
     default: null
@@ -114,5 +118,11 @@ const usersSchema = mongoose.Schema({
     default: []
   }
 }, { timestamps: true })
+
+// Indexes for optimized admin pagination, filtering, and lookup
+usersSchema.index({ role: 1, createdAt: -1 });
+usersSchema.index({ role: 1, VerificaionStatus: 1, createdAt: -1 });
+usersSchema.index({ email: 1 });
+usersSchema.index({ username: 1 });
 
 export const Users = mongoose.model("User", usersSchema);
