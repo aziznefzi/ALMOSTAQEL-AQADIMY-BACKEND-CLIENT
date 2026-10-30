@@ -116,6 +116,14 @@ const usersSchema = mongoose.Schema({
   forgotPasswordRequests: {
     type: [Date],
     default: []
+  },
+  cartProducts: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
+    default: []
+  },
+  purchasedProducts: {
+    type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
+    default: []
   }
 }, { timestamps: true })
 

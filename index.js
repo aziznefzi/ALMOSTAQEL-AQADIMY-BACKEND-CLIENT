@@ -20,6 +20,7 @@ import getUsers from "./Admin/routes/Users/getUsers.js"
 import DeleteUser from "./Admin/routes/Users/DeleteUser.js"
 import UserBaned from "./Admin/routes/Users/UserBaned.js"
 import updateUsers from "./Admin/routes/Users/updateUsers.js"
+import getSupport from "./Admin/routes/support/getSupport.js"
 import mongoose from "mongoose"
 import bcrypt from "bcrypt"
 import { CreateAdminAccunt } from "./Admin/AminAccunt.js"
@@ -31,7 +32,8 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 app.use(cookieParser())
-app.use(express.json())
+app.use(express.json({ limit: "15mb" }))
+app.use(express.urlencoded({ limit: "15mb", extended: true }))
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
@@ -69,13 +71,13 @@ app.use(cors({
 }));
 
 
-// if (mongoose.connection.readyState === 1) {
-//   CreateAdminAccunt();
-// } else {
-//   mongoose.connection.once("connected", () => {
-//     CreateAdminAccunt();
-//   });
-// }
+if (mongoose.connection.readyState === 1) {
+  CreateAdminAccunt();
+} else {
+  mongoose.connection.once("connected", () => {
+    CreateAdminAccunt();
+  });
+}
 
 connectDB()
 
@@ -94,26 +96,28 @@ app.listen(port, () => {
   console.log(`server running is ${port}`)
 })
 
-// // admin router: separate app, reachable only from localhost on a different port
-// const adminPort = process.env.ADMIN_PORT || 4000
-// const adminApp = express()
-// adminApp.use(cookieParser())
-// adminApp.use(express.json())
-// adminApp.use("/uploads", express.static(path.join(__dirname, "uploads")))
-// adminApp.use(cors({
-//   origin: ["http://localhost:5173", "http://localhost:5174"],
-//   credentials: true,
-//   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
-// }))
-// adminApp.use("/admin/auth", AdminLogin)
-// adminApp.use("/admin/", getUsers)
-// adminApp.use("/admin/", DeleteUser)
-// adminApp.use("/admin/", UserBaned)
-// adminApp.use("/admin/", updateUsers)
-// adminApp.use("/admin/", learningAdminRouter)
+// admin router: separate app, reachable only from localhost on a different port
+const adminPort = process.env.ADMIN_PORT || 4000
+const adminApp = express()
+adminApp.use(cookieParser())
+adminApp.use(express.json({ limit: "25mb" }))
+adminApp.use(express.urlencoded({ limit: "25mb", extended: true }))
+adminApp.use("/uploads", express.static(path.join(__dirname, "uploads")))
+adminApp.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:5174"],
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
+}))
+adminApp.use("/admin/auth", AdminLogin)
+adminApp.use("/admin/", getUsers)
+adminApp.use("/admin/", DeleteUser)
+adminApp.use("/admin/", UserBaned)
+adminApp.use("/admin/", updateUsers)
+adminApp.use("/admin/", getSupport)
+adminApp.use("/admin/", learningAdminRouter)
 
-// // Bind to loopback only so the admin API is never exposed externally
-// adminApp.listen(adminPort, "127.0.0.1", () => {
-//   console.log(`admin server running on http://localhost:${adminPort}`)
-// })
+// Bind to loopback only so the admin API is never exposed externally
+adminApp.listen(adminPort, "127.0.0.1", () => {
+  console.log(`admin server running on http://localhost:${adminPort}`)
+})

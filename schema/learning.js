@@ -1,5 +1,44 @@
 import mongoose from "mongoose";
 
+const courseVideoSchema = new mongoose.Schema(
+  {
+    title: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    titleAr: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    videoUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    duration: {
+      type: String,
+      default: "0:00",
+      trim: true,
+    },
+    order: {
+      type: Number,
+      default: 0,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { timestamps: true }
+);
+
 const learningSchema = new mongoose.Schema(
   {
     type: {
@@ -30,6 +69,16 @@ const learningSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    content: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    contentAr: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     category: {
       type: String,
       default: "General",
@@ -46,6 +95,47 @@ const learningSchema = new mongoose.Schema(
       enum: ["published", "draft", "archived"],
       default: "published",
       index: true,
+    },
+    availabilityStatus: {
+      type: String,
+      enum: ["preorder", "available", "unavailable"],
+      default: "preorder",
+      index: true,
+    },
+    preorders: {
+      type: [
+        {
+          userId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Users",
+          },
+          userName: {
+            type: String,
+            default: "",
+            trim: true,
+          },
+          userEmail: {
+            type: String,
+            required: true,
+            trim: true,
+            lowercase: true,
+          },
+          lang: {
+            type: String,
+            enum: ["ar", "en"],
+            default: "ar",
+          },
+          notifiedAt: {
+            type: Date,
+            default: null,
+          },
+          createdAt: {
+            type: Date,
+            default: Date.now,
+          },
+        },
+      ],
+      default: [],
     },
     level: {
       type: String,
@@ -129,6 +219,19 @@ const learningSchema = new mongoose.Schema(
     image: {
       type: String,
       default: "",
+    },
+    imageDataUrl: {
+      type: String,
+      default: "",
+    },
+    videoUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    courseVideos: {
+      type: [courseVideoSchema],
+      default: [],
     },
     stack: {
       type: [String],

@@ -1,14 +1,60 @@
 import express from "express";
 import { Learning } from "../../schema/learning.js";
+import { Orders } from "../../schema/orders.js";
+import { userAuth } from "../../middleware/userAuth.js";
+import { getMsg } from "../../utils/messages.js";
+import coursesRouter from "./courses.js";
+import articlesRouter from "./articles.js";
+import videosRouter from "./videos.js";
+import ordersRouter from "./orders.js";
 
 const router = express.Router();
 
+// Mount modular protected routes for orders, courses, articles, and videos
+router.use("/", ordersRouter);
+router.use("/", coursesRouter);
+router.use("/", articlesRouter);
+router.use("/", videosRouter);
+
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-const ALLOWED_SORT_FIELDS = ["createdAt", "views", "enrollments", "rating", "price", "title"];
+const ALLOWED_SORT_FIELDS = [
+  "createdAt",
+  "views",
+  "enrollments",
+  "rating",
+  "price",
+  "title",
+];
+
+// Strip protected media/article body from public catalog cards
+const toPublicCatalogItem = (item) => {
+  const courseVideosCount = Array.isArray(item.courseVideos)
+    ? item.courseVideos.length
+    : 0;
+  const preordersCount = Array.isArray(item.preorders)
+    ? item.preorders.length
+    : 0;
+  const {
+    courseVideos,
+    videoUrl,
+    content,
+    contentAr,
+    preorders,
+    ...publicFields
+  } = item;
+
+  return {
+    ...publicFields,
+    id: item._id,
+    availabilityStatus: item.availabilityStatus || "preorder",
+    preordersCount,
+    lessons: courseVideosCount > 0 ? courseVideosCount : item.lessons || 0,
+  };
+};
 
 // ============================================================================
-// 1. GET /api/learning - Fetch Public Learning Content (Courses, Articles, Videos)
+// 1. GET /api/learning - Fetch Public Catalog Cards (Courses, Articles, Videos)
 // ============================================================================
 router.get("/learning", async (req, res) => {
   try {
@@ -26,9 +72,10 @@ router.get("/learning", async (req, res) => {
     const page = Number.isInteger(parsedPage) && parsedPage >= 1 ? parsedPage : 1;
 
     const parsedLimit = parseInt(rawLimit, 10);
-    const limit = Number.isInteger(parsedLimit) && parsedLimit >= 1
-      ? Math.min(parsedLimit, 100)
-      : 50;
+    const limit =
+      Number.isInteger(parsedLimit) && parsedLimit >= 1
+        ? Math.min(parsedLimit, 100)
+        : 50;
 
     const skip = (page - 1) * limit;
 
@@ -40,17 +87,15 @@ router.get("/learning", async (req, res) => {
       const t = String(rawType).toLowerCase().trim();
       if (t.includes("course")) query.type = { $in: ["course", "Courses"] };
       else if (t.includes("article")) query.type = { $in: ["article", "Articles"] };
-      else if (t.includes("all") || t.includes("ai")) query.type = { $in: ["ai-video", "All Vidios", "ai_video"] };
+      else if (t.includes("all") || t.includes("ai"))
+        query.type = { $in: ["ai-video", "All Vidios", "ai_video"] };
       else if (t.includes("video")) query.type = { $in: ["video", "Videos"] };
       else query.type = rawType;
     }
 
     // Filter by category
     if (rawCategory && rawCategory !== "all" && rawCategory !== "All") {
-      query.$or = [
-        { category: rawCategory },
-        { tag: rawCategory }
-      ];
+      query.$or = [{ category: rawCategory }, { tag: rawCategory }];
     }
 
     // Filter by level
@@ -84,17 +129,13 @@ router.get("/learning", async (req, res) => {
 
     const [total, items] = await Promise.all([
       Learning.countDocuments(query),
-      Learning.find(query)
-        .sort(sortObj)
-        .skip(skip)
-        .limit(limit)
-        .lean(),
+      Learning.find(query).sort(sortObj).skip(skip).limit(limit).lean(),
     ]);
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
 
     res.status(200).json({
-      items: items.map((i) => ({ ...i, id: i._id })),
+      items: items.map(toPublicCatalogItem),
       pagination: {
         total,
         page,
@@ -111,27 +152,109 @@ router.get("/learning", async (req, res) => {
 });
 
 // ============================================================================
-// 2. GET /api/learning/:id - Fetch Single Learning Item & Track Views
+// 2. GET & POST /api/learning/:id - Fetch Protected Single Learning Item Content
+// Strictly protected by userAuth + Confirmed Purchase Check if paid
 // ============================================================================
-router.get("/learning/:id", async (req, res) => {
+const handleGetProtectedItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const item = await Learning.findOneAndUpdate(
-      { _id: id, status: "published" },
-      { $inc: { views: 1 } },
-      { new: true }
-    ).lean();
+    const item = await Learning.findOne({ _id: id, status: "published" }).lean();
 
     if (!item) {
       return res.status(404).json({ message: "Learning item not found" });
     }
 
-    res.status(200).json({ item: { ...item, id: item._id } });
+    const availability = item.availabilityStatus || "preorder";
+    if (availability === "unavailable") {
+      return res.status(403).json({
+        message: "هذا المنتوج غير متوفر في الوقت الحالي.",
+        unavailable: true,
+        productId: item._id,
+      });
+    }
+    if (availability === "preorder") {
+      return res.status(403).json({
+        message: "هذا المنتوج في مرحلة الطلب المسبق حالياً وسيتم إطلاقه قريباً.",
+        isPreorder: true,
+        productId: item._id,
+      });
+    }
+
+    const effectivePrice = Number(item.priceAfter ?? item.price ?? 0);
+
+    // STRICT PURCHASE ENFORCEMENT: If paid, verify confirmed order or Users.purchasedProducts in DB
+    if (effectivePrice > 0) {
+      const isPurchasedInUserDoc =
+        Array.isArray(req.dbUser?.purchasedProducts) &&
+        req.dbUser.purchasedProducts.some(
+          (pid) => String(pid) === String(item._id)
+        );
+      const approvedOrder = isPurchasedInUserDoc
+        ? true
+        : await Orders.findOne({
+            userId: req.user.userId,
+            productId: item._id,
+            status: "approved",
+          }).lean();
+
+      if (!approvedOrder) {
+        const pendingOrder = await Orders.findOne({
+          userId: req.user.userId,
+          productId: item._id,
+          status: "pending",
+        })
+          .sort({ createdAt: -1 })
+          .lean();
+
+        return res.status(403).json({
+          message:
+            "You must purchase this product and have your payment confirmed to access its content.",
+          requiresPurchase: true,
+          hasPendingOrder: Boolean(pendingOrder),
+          orderCode: pendingOrder?.orderCode || null,
+          paymentMethod: pendingOrder?.paymentMethod || null,
+          productSummary: {
+            id: item._id,
+            title: item.title,
+            titleAr: item.titleAr,
+            type: item.type,
+            price: item.price,
+            priceAfter: effectivePrice,
+            image: item.image,
+            imageDataUrl: item.imageDataUrl,
+          },
+        });
+      }
+    }
+
+    await Learning.updateOne({ _id: item._id }, { $inc: { views: 1 } });
+
+    const courseVideos = Array.isArray(item.courseVideos)
+      ? item.courseVideos.map((v, idx) => ({
+          ...v,
+          id: v._id || v.id,
+          order: v.order ?? idx + 1,
+        }))
+      : [];
+
+    return res.status(200).json({
+      item: {
+        ...item,
+        id: item._id,
+        courseVideos,
+        lessons: courseVideos.length > 0 ? courseVideos.length : item.lessons || 0,
+      },
+    });
   } catch (err) {
-    console.error("Error in GET /api/learning/:id:", err);
-    res.status(500).json({ message: "Failed to fetch item details" });
+    console.error("Error in protected /api/learning/:id:", err);
+    return res.status(500).json({ message: getMsg("serverError", req) });
   }
-});
+};
+
+router.get("/learning/item/:id", userAuth, handleGetProtectedItem);
+router.post("/learning/item/:id", userAuth, handleGetProtectedItem);
+router.get("/learning/:id", userAuth, handleGetProtectedItem);
+router.post("/learning/:id", userAuth, handleGetProtectedItem);
 
 // ============================================================================
 // 3. PATCH /api/learning/:id/view - Lightweight View Tracking

@@ -6,7 +6,8 @@ const supportImageSchema = new mongoose.Schema({
   path: { type: String, required: true },
   mimetype: { type: String, required: true },
   size: { type: Number, required: true },
-  url: { type: String }
+  url: { type: String },
+  dataUrl: { type: String, default: "" }
 }, { _id: false });
 
 const supportSchema = new mongoose.Schema({
@@ -49,8 +50,12 @@ const supportSchema = new mongoose.Schema({
   images: [supportImageSchema],
   status: {
     type: String,
-    enum: ["pending", "in-progress", "resolved", "closed"],
+    enum: ["pending", "in-progress", "resolved", "closed", "rejected"],
     default: "pending"
+  },
+  rejectionReason: {
+    type: String,
+    default: ""
   },
   ipAddress: {
     type: String,
@@ -65,6 +70,10 @@ const supportSchema = new mongoose.Schema({
     default: Date.now
   }
 }, { timestamps: true });
+
+supportSchema.index({ createdAt: -1 });
+supportSchema.index({ status: 1, createdAt: -1 });
+supportSchema.index({ email: 1 });
 
 export const Support = mongoose.model("Support", supportSchema);
 export default Support;

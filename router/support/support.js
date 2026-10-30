@@ -622,15 +622,27 @@ router.post("/support", preCheckDeviceBanMiddleware, (req, res) => {
         });
       }
 
-      // Format uploaded images (up to 2, optional)
-      const uploadedImages = (req.files || []).map((file) => ({
-        filename: file.filename,
-        originalname: file.originalname,
-        path: file.path,
-        mimetype: file.mimetype,
-        size: file.size,
-        url: `/uploads/support/${file.filename}`
-      }));
+      // Format uploaded images (up to 2, optional) and store base64 dataUrl in MongoDB
+      const uploadedImages = (req.files || []).map((file) => {
+        let dataUrl = "";
+        try {
+          if (file.path && fs.existsSync(file.path)) {
+            const fileBuffer = fs.readFileSync(file.path);
+            dataUrl = `data:${file.mimetype};base64,${fileBuffer.toString("base64")}`;
+          }
+        } catch (readErr) {
+          console.error("Error converting support image to base64:", readErr);
+        }
+        return {
+          filename: file.filename,
+          originalname: file.originalname,
+          path: file.path,
+          mimetype: file.mimetype,
+          size: file.size,
+          url: `/uploads/support/${file.filename}`,
+          dataUrl
+        };
+      });
 
       // Generate unique friendly ticket ID
       const datePart = Date.now().toString(36).toUpperCase();
