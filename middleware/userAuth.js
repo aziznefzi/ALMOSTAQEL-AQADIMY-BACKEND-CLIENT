@@ -24,7 +24,11 @@ export const userAuth = async (req, res, next) => {
     }
 
     if (!token || token === "null" || token === "undefined") {
-      return res.status(401).json({ message: getMsg("tokenMissing", req) });
+      return res.status(401).json({
+        message: getMsg("tokenMissing", req),
+        tokenMissing: true,
+        code: "TOKEN_MISSING",
+      });
     }
 
     // 2. Cryptographic verification of JWT signature & expiration
@@ -32,14 +36,25 @@ export const userAuth = async (req, res, next) => {
     try {
       decoded = jwt.verify(token, process.env.ACCESS_TOKEN);
     } catch (jwtErr) {
-      return res.status(401).json({ message: getMsg("tokenInvalid", req) });
+      if (jwtErr.name === "TokenExpiredError") {
+        return res.status(401).json({
+          message: getMsg("tokenInvalid", req),
+          tokenExpired: true,
+          code: "TOKEN_EXPIRED",
+        });
+      }
+      return res.status(401).json({
+        message: getMsg("tokenInvalid", req),
+        tokenExpired: false,
+        code: "TOKEN_INVALID",
+      });
     }
 
     if (!decoded || decoded.type !== "user-access" || !decoded.userId) {
       return res.status(403).json({ message: getMsg("tokenTypeInvalid", req) });
     }
 
-    // 3. Enforce x-device-id presence
+    // 3. Enforce x-device-id presence & strict device binding
     const incomingDeviceId =
       req.headers["x-device-id"] ||
       req.headers["device-id"] ||
@@ -48,6 +63,16 @@ export const userAuth = async (req, res, next) => {
 
     if (!incomingDeviceId) {
       return res.status(403).json({ message: getMsg("deviceIdRequired", req) });
+    }
+
+    if (
+      decoded.deviceId &&
+      String(decoded.deviceId).trim() !== String(incomingDeviceId).trim()
+    ) {
+      return res.status(403).json({
+        message: getMsg("deviceMismatch", req),
+        accountRestricted: true,
+      });
     }
 
     // 4. Check Device or User Ban in BlockedIps
@@ -61,32 +86,53 @@ export const userAuth = async (req, res, next) => {
     });
 
     if (banRecord) {
-      if (banRecord.StateBan === "permanent-baned") {
-        return res
-          .status(403)
-          .json({ message: getMsg("accountPermanentBan", req) });
+      if (
+        banRecord.StateBan === "permanent-baned" ||
+        banRecord.BannedCount >= 3
+      ) {
+        return res.status(403).json({
+          message: getMsg("accountPermanentBan", req),
+          accountRestricted: true,
+        });
       }
       if (
         banRecord.banneDate &&
         banRecord.banneDate.getTime() + 10 * 60 * 1000 > Date.now()
       ) {
-        return res
-          .status(403)
-          .json({ message: getMsg("accountTempSuspension", req) });
+        return res.status(403).json({
+          message: getMsg("accountTempSuspension", req),
+          accountRestricted: true,
+        });
       }
     }
 
-    // 5. Verify user exists in DB and is verified
+    // 5. Verify user exists in DB, is not locked/restricted, and is verified
     const userInDb = await Users.findById(decoded.userId).lean();
     if (!userInDb) {
-      return res.status(404).json({ message: getMsg("accountNotFound", req) });
+      return res.status(404).json({
+        message: getMsg("accountNotFound", req),
+        accountRestricted: true,
+      });
+    }
+
+    if (
+      (userInDb.lockUntil && new Date(userInDb.lockUntil) > new Date()) ||
+      (userInDb.blockedUntil && new Date(userInDb.blockedUntil) > new Date())
+    ) {
+      return res.status(403).json({
+        message: getMsg("accountTempSuspension", req, userInDb),
+        accountRestricted: true,
+      });
     }
 
     if (
       userInDb.VerificaionStatus !== "verified" &&
       userInDb.isVerify !== true
     ) {
-      return res.status(403).json({ message: getMsg("tokenInvalid", req) });
+      return res.status(403).json({
+        message: getMsg("tokenInvalid", req, userInDb),
+        accountRestricted: true,
+      });
     }
 
     req.user = decoded;

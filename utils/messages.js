@@ -191,6 +191,14 @@ export const messages = {
   switchAccountSuccess: {
     ar: "تم التبديل وتسجيل الدخول بنجاح.",
     en: "Switched and signed in successfully."
+  },
+  tokenRefreshedSuccess: {
+    ar: "تم تجديد رمز الجلسة بنجاح.",
+    en: "Session token renewed successfully."
+  },
+  sessionLoggedOut: {
+    ar: "تم تسجيل الخروج من هذه الجلسة، يرجى تسجيل الدخول مجدداً.",
+    en: "This session has been logged out, please sign in again."
   }
 };
 
