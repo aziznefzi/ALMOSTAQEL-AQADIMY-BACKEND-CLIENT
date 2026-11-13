@@ -32,6 +32,11 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
+
+app.get("health", (req, res) => {
+  res.status(200).message({message: "server is awzke"})
+})
+
 app.use(cookieParser())
 app.use(express.json({ limit: "15mb" }))
 app.use(express.urlencoded({ limit: "15mb", extended: true }))
@@ -42,7 +47,6 @@ app.use((err, req, res, next) => {
   }
   next();
 })
-
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -92,10 +96,6 @@ app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
 app.use("/api", supportRouter)
 app.use("/api", learningClientRouter)
-
-app.get("health", (req, res) => {
-  res.status(200).message({message: "server is awzke"})
-})
 
 app.listen(port, () => {
   console.log(`server running is ${port}`)
