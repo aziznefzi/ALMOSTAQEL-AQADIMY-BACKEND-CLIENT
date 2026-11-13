@@ -34,7 +34,7 @@ const __dirname = path.dirname(__filename)
 const app = express()
 
 app.get("/health", (req, res) => {
-  res.status(200).message({message: "server is awzke"})
+  res.status(200).json({message: "server is awzke"})
 })
 
 app.use(cookieParser())
