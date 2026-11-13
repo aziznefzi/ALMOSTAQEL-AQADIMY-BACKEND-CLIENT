@@ -49,12 +49,24 @@ const servicesSchema = new mongoose.Schema(
       type: String,
       enum: ["pending", "contacted", "in-progress", "completed", "cancelled"],
       default: "pending"
+    },
+    adminNotes: {
+      type: [
+        {
+          text: { type: String, trim: true, maxLength: 2000 },
+          createdAt: { type: Date, default: Date.now }
+        }
+      ],
+      default: []
     }
   },
   {
     timestamps: true
   }
 );
+
+servicesSchema.index({ status: 1, createdAt: -1 });
+servicesSchema.index({ createdAt: -1 });
 
 export const Services = mongoose.models.Service || mongoose.model("Service", servicesSchema);
 export default Services;

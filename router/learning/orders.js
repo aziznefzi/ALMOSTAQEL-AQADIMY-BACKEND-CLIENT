@@ -348,83 +348,72 @@ router.post("/learning/orders/create", userAuth, async (req, res) => {
       return res.status(404).json({ message: "Requested product(s) not found." });
     }
 
+    const isAr =
+      (req.headers["x-lang"] || req.headers["accept-language"] || dbUser.lang || "ar")
+        .toLowerCase()
+        .includes("ar");
+
     const methodInfo = PAYMENT_METHODS_INFO[normalizedMethod];
     const ribCode = methodInfo.getRib();
     const sharedOrderCode = generateOrderCode();
 
     const createdOrders = [];
     let totalAmount = 0;
+    let existingOrderFound = null;
 
     for (let i = 0; i < products.length; i++) {
       const prod = products[i];
       const effectivePrice = Number(prod.priceAfter ?? prod.price ?? 0);
 
-      // Check if already approved
-      const alreadyApproved = await Orders.findOne({
+      // Check if user has already ordered this product (pending or approved) - one order only per product
+      const existingOrder = await Orders.findOne({
         userId: dbUser._id,
         productId: prod._id,
-        status: "approved",
-      });
-      if (alreadyApproved) {
+        status: { $in: ["pending", "approved"] },
+      }).lean();
+
+      if (existingOrder) {
+        existingOrderFound = existingOrder;
         continue;
       }
 
-      // Check if user already has a pending order for this product
-      let existingPending = await Orders.findOne({
-        userId: dbUser._id,
-        productId: prod._id,
-        status: "pending",
-      });
-
       const orderCodeToUse =
         products.length === 1
-          ? existingPending?.orderCode || sharedOrderCode
+          ? sharedOrderCode
           : `${sharedOrderCode}-${i + 1}`;
 
-      if (existingPending) {
-        existingPending.paymentMethod = normalizedMethod;
-        existingPending.userPhone = userPhone || existingPending.userPhone;
-        existingPending.ribSent = ribCode;
-        existingPending.amount = effectivePrice;
-        await existingPending.save();
-        createdOrders.push(existingPending.toObject());
-      } else {
-        const newOrder = await Orders.create({
-          orderCode: orderCodeToUse,
-          userId: dbUser._id,
-          userName: fullName,
-          userEmail: dbUser.email,
-          userPhone: userPhone,
-          productId: prod._id,
-          productTitle: prod.title,
-          productTitleAr: prod.titleAr || prod.title,
-          productType: prod.type || "Courses",
-          productImage: prod.image || "",
-          amount: effectivePrice,
-          paymentMethod: normalizedMethod,
-          ribSent: ribCode,
-          status: "pending",
-        });
-        createdOrders.push(newOrder.toObject());
-      }
-
+      const newOrder = await Orders.create({
+        orderCode: orderCodeToUse,
+        userId: dbUser._id,
+        userName: fullName,
+        userEmail: dbUser.email,
+        userPhone: userPhone,
+        productId: prod._id,
+        productTitle: prod.title,
+        productTitleAr: prod.titleAr || prod.title,
+        productType: prod.type || "Courses",
+        productImage: prod.image || "",
+        amount: effectivePrice,
+        paymentMethod: normalizedMethod,
+        ribSent: ribCode,
+        status: "pending",
+      });
+      createdOrders.push(newOrder.toObject());
       totalAmount += effectivePrice;
     }
 
     if (createdOrders.length === 0) {
-      return res.status(200).json({
-        message: "You already own this product.",
-        alreadyOwned: true,
+      return res.status(400).json({
+        message: isAr
+          ? "لقد طلبت المنتوج مسبقاً بالفعل"
+          : "You have already ordered this product previously",
+        alreadyOrdered: true,
+        orderCode: existingOrderFound?.orderCode || null,
       });
     }
 
     const primaryOrderCode =
       createdOrders.length === 1 ? createdOrders[0].orderCode : sharedOrderCode;
-
-    const isAr =
-      (req.headers["x-lang"] || req.headers["accept-language"] || dbUser.lang || "ar")
-        .toLowerCase()
-        .includes("ar");
 
     const emailPayload = buildOrderPaymentEmail({
       userName: fullName,
@@ -734,24 +723,27 @@ router.post("/learning/:id/preorder", userAuth, async (req, res) => {
 
     const alreadyPreordered = Boolean(existingEntry);
 
-    if (!existingEntry) {
-      item.preorders.push({
-        userId: req.user.userId,
-        userName: fullName,
-        userEmail,
-        lang: userLang,
-        createdAt: new Date(),
+    if (existingEntry) {
+      return res.status(400).json({
+        alreadyPreordered: true,
+        productId: String(item._id),
+        message: isAr
+          ? "لقد طلبت المنتوج مسبقاً بالفعل"
+          : "You have already ordered this product previously",
       });
-      await item.save();
-    } else {
-      existingEntry.lang = userLang;
-      existingEntry.userName = fullName;
-      item.markModified("preorders");
-      await item.save();
     }
 
+    item.preorders.push({
+      userId: req.user.userId,
+      userName: fullName,
+      userEmail,
+      lang: userLang,
+      createdAt: new Date(),
+    });
+    await item.save();
+
     return res.status(200).json({
-      alreadyPreordered,
+      alreadyPreordered: false,
       productId: String(item._id),
       message: isAr
         ? "تم تسجيل طلبك المسبق بنجاح! سيصلك إشعار عبر البريد الإلكتروني فور إطلاق هذا المنتوج."
