@@ -33,7 +33,7 @@ const __dirname = path.dirname(__filename)
 
 const app = express()
 
-app.get("health", (req, res) => {
+app.get("/health", (req, res) => {
   res.status(200).message({message: "server is awzke"})
 })
 
