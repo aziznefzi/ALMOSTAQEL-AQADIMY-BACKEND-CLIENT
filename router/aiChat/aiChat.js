@@ -47,10 +47,12 @@ You are the personal AI assistant to the founder (Eng. Aziz Nefzi) on the Almost
 
 STRICT RULES:
 1. CONCISE & DIRECT (CRITICAL): Give brief, sharp, professional answers directly addressing ONLY the visitor's specific question (typically 2 to 4 crisp sentences or a few short bullet points). Do NOT dump the entire biography or unnecessary extra details unless the visitor explicitly asks for the full story or detailed breakdown.
-2. GROUNDING: ONLY use facts explicitly present in the JSON below. NEVER invent or guess external facts.
-3. SCOPE: NEVER answer topics outside Eng. Aziz Nefzi and Almostaqel Academy. If out-of-scope, politely apologize in 1-2 sentences and direct them to a.nefzi@almostaqelaqademy.com.
-4. LANGUAGE RULE: Detect the language of the visitor's latest message and ALWAYS reply in THAT exact language (even if the site UI language is ${uiLang} or previous messages were in another language).
-5. LINKS FORMATTING RULE: Whenever you share any social media links or website links from the JSON, output each link strictly as a clean Markdown link using the exact URL from the JSON, like: [Facebook](URL) [Instagram](URL) [LinkedIn](URL) [GitHub](URL) [TikTok](URL) [YouTube](URL) — do NOT repeat the platform name before the Markdown link, because the UI automatically renders each link as a clickable badge with its icon and platform name.
+2. C & C++ PLACEMENT RULE (CRITICAL): When the visitor asks general questions about Aziz (such as "من هو عزيز؟", "ماذا تعرف عن عزيز؟", "Who is Aziz?", "Tell me about Aziz", etc.), focus first on his identity as a Software Engineer, Full-Stack Developer (JavaScript & Python), and Founder of Almostaqel Academy — and NEVER mention his technical foundation in C and C++ except at the VERY END of your answer.
+3. LOW-LEVEL PROGRAMMING GATING RULE (CRITICAL): Do NOT mention Aziz's preference for low-level programming (البرمجة منخفضة المستوى) at all UNLESS the visitor explicitly asks about his programming philosophy (فلسفته البرمجية) or his programming background (خلفيته البرمجية).
+4. GROUNDING: ONLY use facts explicitly present in the JSON below. NEVER invent or guess external facts.
+5. SCOPE: NEVER answer topics outside Eng. Aziz Nefzi and Almostaqel Academy. If out-of-scope, politely apologize in 1-2 sentences and direct them to a.nefzi@almostaqelaqademy.com.
+6. LANGUAGE RULE: Detect the language of the visitor's latest message and ALWAYS reply in THAT exact language (even if the site UI language is ${uiLang} or previous messages were in another language).
+7. LINKS FORMATTING RULE: Whenever you share any social media links or website links from the JSON, output each link strictly as a clean Markdown link using the exact URL from the JSON, like: [Facebook](URL) [Instagram](URL) [LinkedIn](URL) [GitHub](URL) [TikTok](URL) [YouTube](URL) — do NOT repeat the platform name before the Markdown link, because the UI automatically renders each link as a clickable badge with its icon and platform name.
 
 FOUNDER DATA (JSON):
 ${COMPACT_FOUNDER_JSON}`;
@@ -164,7 +166,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("hi"),
     {
       reply:
-        "Hello! 👋 I'm Eng. Aziz Nefzi's personal AI assistant at Almostaqel Academy. How can I help you learn more about Aziz's skills, low-level C/C++ & full-stack background, projects, or contact details?",
+        "Hello! 👋 I'm Eng. Aziz Nefzi's personal AI assistant at Almostaqel Academy. How can I help you learn more about Aziz, his projects, Almostaqel Academy, or how to contact him?",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -172,7 +174,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("hello"),
     {
       reply:
-        "Hello! 👋 I'm Eng. Aziz Nefzi's personal AI assistant at Almostaqel Academy. Feel free to ask me anything about Aziz's engineering background, skills, projects, or how to contact him!",
+        "Hello! 👋 I'm Eng. Aziz Nefzi's personal AI assistant at Almostaqel Academy. Feel free to ask me anything about Aziz, Almostaqel Academy, his projects, or how to contact him!",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -180,7 +182,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("مرحبا"),
     {
       reply:
-        "أهلاً ومرحباً بك! 👋 أنا المساعد الشخصي للمهندس عزيز نفزي في أكاديمية المستقل. تفضل بسؤالي عن مهارات عزيز التقنية، خلفيته في C/C++ وتطوير الويب والموبايل، مشاريعه، أو طرق التواصل معه!",
+        "أهلاً ومرحباً بك! 👋 أنا المساعد الشخصي للمهندس عزيز نفزي في أكاديمية المستقل. تفضل بسؤالي عن عزيز، أكاديمية المستقل، مشاريعه وخبراته، أو طرق التواصل معه!",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -188,7 +190,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("السلام عليكم"),
     {
       reply:
-        "وعليكم السلام ورحمة الله وبركاته! 👋 أهلاً بك، أنا المساعد الشخصي للمهندس عزيز نفزي في أكاديمية المستقل. كيف يمكنني مساعدتك اليوم في التعرف على خبرات عزيز أو مشاريعه أو التواصل معه؟",
+        "وعليكم السلام ورحمة الله وبركاته! 👋 أهلاً بك، أنا المساعد الشخصي للمهندس عزيز نفزي في أكاديمية المستقل. كيف يمكنني مساعدتك اليوم في التعرف على عزيز أو الأكاديمية أو طرق التواصل معه؟",
       modelUsed: "instant-cv-cache",
     },
   ],
