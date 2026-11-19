@@ -109,10 +109,10 @@ const instantAnswerCache = new Map([
     },
   ],
   [
-    normalizeQuestionKey("حدثني عن خلفيته في C و C++ والـ Low-Level"),
+    normalizeQuestionKey("حدثني عن خلفية عزيز في البرمجة"),
     {
       reply:
-        "بنى المهندس عزيز نفزي أساسه البرمجي من الجذور عبر لغتي **C و C++** وفهم أنظمة الحاسوب على المستوى المنخفض (**Low-Level**)، متأثراً بنهج مهندس البرمجيات **Casey Muratori** (قناة Molly Rocket) والكتب المرجعية مثل *Computer Systems: A Programmer's Perspective* و*The C Programming Language*.\n\nيركز عزيز على فهم إدارة الذاكرة، المؤشرات (Pointers)، لغة التجميع (Assembly)، وكيفية تفاعل البرمجيات مباشرة مع المعالج والعتاد (Hardware) لكتابة كود عالي الكفاءة والأداء بدلاً من الاعتماد العشوائي على المكتبات الجاهزة.",
+        "بدأت رحلة المهندس عزيز نفزي في البرمجة من الصفر بتعلم أساسيات لغة **C** على هاتفه المحمول، وبعد البكالوريا عمل في مصنع لشراء أول حاسوب شخصي والانطلاق بعمق في علوم الحاسوب.\n\nبنى تأسيساً قوياً في **C و C++** وفهم أنظمة الحاسوب على المستوى المنخفض (**Low-Level**) متأثراً بـ **Casey Muratori** وفلسفة البرمجة الواعية بالأداء (إدارة الذاكرة، المؤشرات، العتاد، وتجنب التعقيد غير الضروري)، ثم توسع استراتيجياً إلى **JavaScript و Python** بخبرة تمتد لحوالي **4 سنوات** في تطوير تطبيقات الويب والموبايل وسطح المكتب والسكريبتات.",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -141,10 +141,10 @@ const instantAnswerCache = new Map([
     },
   ],
   [
-    normalizeQuestionKey("Tell me about his C/C++ & low-level background"),
+    normalizeQuestionKey("Tell me about Aziz's programming background"),
     {
       reply:
-        "Eng. Aziz Nefzi built his software engineering foundation from the ground up through **C and C++**, inspired by **Casey Muratori** (Molly Rocket) and classic systems texts like *Computer Systems: A Programmer's Perspective*, *The C Programming Language*, and *Code* by Charles Petzold.\n\nHe focuses deeply on memory management, pointers, computer architecture, assembly language, CPU execution, and optimizing software performance rather than relying heavily on black-box libraries and frameworks.",
+        "Eng. Aziz Nefzi started from scratch by learning **C** fundamentals on his mobile phone, and after his Baccalaureate worked in a factory to buy his first PC and dive deeply into computer science.\n\nHe built a strong low-level foundation in **C and C++** inspired by **Casey Muratori** and Performance-Aware Programming (memory management, CPU/cache awareness, and avoiding unnecessary complexity), then strategically expanded into **JavaScript and Python**—bringing ~4 years of experience building web, mobile, desktop applications, and scripts.",
       modelUsed: "instant-cv-cache",
     },
   ],
