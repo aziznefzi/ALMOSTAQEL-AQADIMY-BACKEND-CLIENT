@@ -20,20 +20,52 @@
       "location_en": "Tunisia, Ben Arous",
       "location_ar": "تونس، بن عروس",
       "official_email": "a.nefzi@almostaqelaqademy.com",
-      "website": "https://www.almostaqelaqademy.com",
-      "github": "https://github.com/aziznefzi"
+      "website": "https://www.almostaqelaqademy.com"
+    },
+    "social_links": {
+      "Facebook": "https://www.facebook.com/profile.php?id=61596644246184",
+      "Instagram": "https://www.instagram.com/almostaqelacademy?dmpr=MTgyazF6Z2JndmwwcQ==",
+      "LinkedIn": "https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android",
+      "GitHub": "https://github.com/aziznefzi",
+      "TikTok": "https://www.tiktok.com/@almostaqel.academ?_r=1&_t=ZS-9BXSZ4INTvh",
+      "YouTube": "https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV"
     },
     "professional_summary": {
       "en": "Software Engineer with a strong foundation in programming and computer systems, built from the ground up through C and C++. Focused on performance, efficiency, and understanding how software works at a low level, with a preference for optimizing solutions over relying heavily on libraries and frameworks. Inspired by software engineer Casey Muratori and his approach to programming. Later expanded into JavaScript and Python to explore and develop web, mobile, and desktop applications. Also passionate about technical content creation, sharing knowledge, and explaining software engineering and programming concepts.",
       "ar": "مهندس برمجيات يمتلك أساساً قوياً في البرمجة وأنظمة الحاسوب، بُني من الصفر من خلال لغتي C و C++. يركز على الأداء والكفاءة وفهم كيفية عمل البرمجيات على المستوى المنخفض (Low-Level)، مع تفضيل تحسين الحلول البرمجية بدلاً من الاعتماد المفرط على المكتبات وأطر العمل الجاهزة. متأثر بمهندس البرمجيات Casey Muratori ونهجه في البرمجة. توسع لاحقاً إلى لغتي JavaScript و Python لاستكشاف وتطوير تطبيقات الويب والموبايل وسطح المكتب. كما أنه شغوف بصناعة المحتوى التقني ومشاركة المعرفة وشرح مفاهيم هندسة البرمجيات والبرمجة."
     },
     "technical_skills": {
-      "programming_languages": ["JavaScript", "Python", "C", "C++"],
-      "frontend_development": ["React.js", "Next.js", "Tailwind CSS"],
-      "backend_development": ["Node.js", "Express.js", "NestJS", "Django", "FastAPI"],
-      "mobile_development": ["React Native"],
-      "databases": ["MongoDB", "PostgreSQL"],
-      "tools_and_platforms": ["Git", "GitHub", "Burp Suite", "nmap"],
+      "programming_languages": [
+        "JavaScript",
+        "Python",
+        "C",
+        "C++"
+      ],
+      "frontend_development": [
+        "React.js",
+        "Next.js",
+        "Tailwind CSS"
+      ],
+      "backend_development": [
+        "Node.js",
+        "Express.js",
+        "NestJS",
+        "Django",
+        "FastAPI"
+      ],
+      "mobile_development": [
+        "React Native"
+      ],
+      "databases": [
+        "MongoDB",
+        "PostgreSQL"
+      ],
+      "tools_and_platforms": [
+        "Git",
+        "GitHub",
+        "Burp Suite",
+        "nmap"
+      ],
       "development_concepts": [
         "Low-Level Programming & Computer Systems (البرمجة منخفضة المستوى وأنظمة الحاسوب)",
         "Memory Management & Performance Optimization (إدارة الذاكرة وتحسين الأداء)",
