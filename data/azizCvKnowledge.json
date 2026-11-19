@@ -1,8 +1,9 @@
 {
   "bot_instructions": {
-    "primary_directive_ar": "أنت المساعد الشخصي للمؤسس في موقع الأكاديمية. أجب عن أسئلة الزوار بناءً على المعلومات المزودة لك فقط وبأسلوب احترافي وودود. إذا سُئلت عن معلومة غير موجودة في النص، اعتذر بلطف ووجه الزائر للتواصل عبر البريد الإلكتروني الرسمي a.nefzi@almostaqelaqademy.com",
-    "primary_directive_en": "You are the personal AI assistant to the founder (Aziz Nefzi) on the Almostaqel Academy website. Answer visitors' questions strictly based ONLY on the provided information in a professional and friendly manner. If asked about any information not present in the provided text or outside the scope of Aziz Nefzi and Almostaqel Academy, politely apologize and direct the visitor to contact via the official email: a.nefzi@almostaqelaqademy.com",
+    "primary_directive_ar": "أنت المساعد الشخصي للمؤسس في موقع الأكاديمية. أجب عن أسئلة الزوار بناءً على المعلومات المزودة لك فقط وبشكل مختصر ومهني وودود على قدر السؤال دون إطالة غير ضرورية. إذا سُئلت عن معلومة غير موجودة في النص، اعتذر بلطف ووجه الزائر للتواصل عبر البريد الإلكتروني الرسمي a.nefzi@almostaqelaqademy.com",
+    "primary_directive_en": "You are the personal AI assistant to the founder (Aziz Nefzi) on the Almostaqel Academy website. Answer visitors' questions strictly based ONLY on the provided information, concisely, directly, and professionally tailored to the exact question asked. If asked about any information not present in the provided text or outside the scope of Aziz Nefzi and Almostaqel Academy, politely apologize and direct the visitor to contact via the official email: a.nefzi@almostaqelaqademy.com",
     "strict_rules": [
+      "ALWAYS keep answers concise, focused, and professional — answer ONLY what the visitor specifically asked (typically 2–4 crisp sentences or short bullet points), unless the visitor explicitly asks for the full story or detailed explanation.",
       "NEVER invent, guess, extrapolate, or hallucinate any facts, dates, companies, degrees, or personal details that are not explicitly listed in this JSON knowledge base.",
       "NEVER answer general knowledge questions, coding homework, politics, religion, entertainment, or topics unrelated to Aziz Nefzi, his skills, his background, or Almostaqel Academy.",
       "Always respond in the same language the visitor used in their question (Arabic if the question is in Arabic, English if the question is in English).",
@@ -130,6 +131,49 @@
     "languages": {
       "Arabic": "Excellent (ممتاز / اللغة الأم)",
       "English": "Intermediate (متوسط)"
+    },
+    "experience_years": "Approximately 4 years of programming and software development experience (حوالي 4 سنوات من الخبرة في البرمجة وتطوير البرمجيات)",
+    "personal_story_and_journey": {
+      "early_passion_for_programming": {
+        "en": "Aziz developed a passion for programming at an early age under challenging circumstances without owning a personal computer. Determined to learn, he began studying C programming fundamentals directly on his mobile phone. Although family circumstances prevented him from pursuing an IT academic track and led him to the Literature stream, he never gave up and continued learning programming independently.",
+        "ar": "نشأ شغف عزيز بالبرمجة منذ سن مبكرة رغم الظروف الصعبة وعدم امتلاكه لحاسوب شخصي آنذاك، فبدأ بتعلم أساسيات البرمجة بلغة C مباشرة على هاتفه المحمول. ورغم أن الظروف العائلية وجّهته للدراسة في شعبة الآداب بدلاً من مسار تكنولوجيا المعلومات، لم يتخلَّ عن حلمه وواصل تعلم البرمجة بشكل مستقل."
+      },
+      "decision_that_changed_everything": {
+        "en": "After obtaining his Baccalaureate degree, Aziz chose to pause formal education and work in a factory with one clear goal: saving enough money to buy his first personal computer. Once he bought his PC, his solid mobile-learned fundamentals allowed him to rapidly dive into advanced technical topics and computer science.",
+        "ar": "بعد حصوله على شهادة البكالوريا، اتخذ قراراً مفصلياً بإيقاف التعليم الأكاديمي والعمل في مصنع بهدف واضح: ادخار ما يكفي لشراء أول حاسوب شخصي له. وبمجرد امتلاك حاسوبه، وبفضل أساسه المتين الذي بناه على الهاتف، انطلق بسرعة لاستكشاف مواضيع تقنية متقدمة وتوسيع معرفته في علوم الحاسوب."
+      },
+      "programming_philosophy_and_inspiration": {
+        "en": "Deeply influenced by Casey Muratori (Molly Rocket) and Performance-Aware Programming—understanding the true computational cost of code rather than treating hardware as magic with infinite resources.",
+        "ar": "تأثر بشدة بالمهندس Casey Muratori (قناة Molly Rocket) وفلسفة البرمجة الواعية بالأداء (Performance-Aware Programming)، التي تؤكد على فهم التكلفة الحقيقية للكود بدلاً من التعامل مع الحاسوب كآلة سحرية بموارد غير محدودة.",
+        "core_principles": [
+          "Understanding hardware architecture and the relationship between CPU performance, RAM, and CPU caches.",
+          "Data-Oriented Design: organizing data for optimal memory access and processing efficiency.",
+          "Understanding theoretical performance limits and measuring software against actual hardware capabilities.",
+          "Avoiding premature abstractions and unnecessary complexity.",
+          "Understanding the performance implications of architectural and programming decisions.",
+          "Questioning unnecessary dependencies, software bloat, and blindly following conventions."
+        ]
+      },
+      "transition_to_modern_development": {
+        "en": "Due to financial and time constraints that made a pure C/C++ systems-programming path harder to pursue exclusively, Aziz made a strategic decision to expand into JavaScript and Python for web, frontend, backend, and application development. His strong fundamentals made the transition smooth and enabled him to quickly build real-world software solutions.",
+        "ar": "نظراً لقيود الوقت والظروف المادية التي صعّبت الاستمرار حصرياً في مسار برمجة الأنظمة العميق بـ C و C++، اتخذ قراراً استراتيجياً بالتوسع إلى JavaScript و Python لتطوير تطبيقات الويب (Frontend و Backend) والتطبيقات العملية، وهو ما سهّلته خلفيته التأسيسية القوية."
+      },
+      "professional_experience_and_approach": {
+        "en": "Approximately 4 years of programming and software development experience. Driven by curiosity, independence, problem-solving, and understanding how things work internally. Believes learning in software engineering never ends.",
+        "ar": "يمتلك حوالي 4 سنوات من الخبرة في البرمجة وتطوير البرمجيات، ويعتمد في أسلوبه على الفضول العلمي والاستقلالية وحل المشكلات وفهم كيفية عمل الأنظمة من الداخل، مؤمناً بأن التعلم في هندسة البرمجيات رحلة مستمرة لا تتوقف."
+      },
+      "building_almostaqel_academy": {
+        "en": "Almostaqel Academy is a major milestone—more than an educational platform, it lets Aziz share knowledge, demonstrate real capabilities, and establish his presence in the dev community. Its educational philosophy is problem-driven: teaching why a concept exists, when to use it, and how it solves real-world problems through courses, problem-driven explanations, exercises, practical projects, and technical articles.",
+        "ar": "تُعد أكاديمية المستقل محطة مفصلية في مسيرته؛ فهي أكثر من مجرد منصة تعليمية، بل مساحة لمشاركة المعرفة وإثبات القدرات الحقيقية. تقوم فلسفتها التعليمية على الفهم القائم على المشكلات (Problem-Driven) بدلاً من التلقين النظري، ليفهم المتعلم لماذا وُجد المفهوم ومتى يُستخدم وكيف يحل مشكلات حقيقية عبر الدورات، التمارين، المشاريع العملية، والمقالات التقنية."
+      },
+      "independence_and_entrepreneurial_mindset": {
+        "en": "Aziz has received several job offers from companies throughout his career, but declined them because he values professional independence and the freedom to choose what he builds—dedicating his effort to his own vision, Almostaqel Academy, and independent software products.",
+        "ar": "تلقّى عزيز عدة عروض عمل من شركات خلال مسيرته، لكنه اعتذر عنها لإيمانه بقيمة الاستقلالية المهنية وحرية اختيار ما يعمل عليه، مفضلاً توجيه وقته وجهده لبناء مشاريعه الخاصة ومنتجاته البرمجية وتطوير أكاديمية المستقل وفق رؤيته."
+      },
+      "continuous_learning_and_future_direction": {
+        "en": "Views software development as a continuous lifelong journey rather than a destination, focused long-term on building meaningful independent products, expanding technical depth, and sharing knowledge.",
+        "ar": "ينظر عزيز إلى تطوير البرمجيات كرحلة تعلم وتطور مستمرة كل يوم وليس كوجهة نهائية، ويركز في رؤيته المستقبلية على بناء منتجات برمجية مستقلة وذات قيمة، وتعميق قدراته التقنية ومشاركة المعرفة."
+      }
     }
   }
 }
