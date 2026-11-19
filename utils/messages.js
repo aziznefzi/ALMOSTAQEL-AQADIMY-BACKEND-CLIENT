@@ -199,6 +199,34 @@ export const messages = {
   sessionLoggedOut: {
     ar: "تم تسجيل الخروج من هذه الجلسة، يرجى تسجيل الدخول مجدداً.",
     en: "This session has been logged out, please sign in again."
+  },
+  deviceOrEmailBanned: {
+    ar: "عذراً، هذا الجهاز أو البريد الإلكتروني محظور من استخدام خدمات المنصة.",
+    en: "Sorry, this device or email is banned from using platform services."
+  },
+  spamAttackBan: {
+    ar: "تم حظر جهازك تلقائياً بسبب اكتشاف نشاط سبام متكرر ومشبوه.",
+    en: "Your device has been automatically banned due to repeated suspicious spam activity."
+  },
+  aiChatEmptyMessage: {
+    ar: "يرجى كتابة سؤالك أو رسالتك قبل الإرسال.",
+    en: "Please enter your question or message before sending."
+  },
+  aiChatMessageTooLong: {
+    ar: "الرسالة طويلة جداً. يرجى اختصار سؤالك في حدود 1000 حرف.",
+    en: "Message is too long. Please keep your question within 1000 characters."
+  },
+  aiChatCooldown: {
+    ar: "يرجى التمهل قليلاً والانتظار ثوانٍ معدودة قبل إرسال رسالتك التالية.",
+    en: "Please slow down and wait a few seconds before sending your next message."
+  },
+  aiChatRateLimitSoft: {
+    ar: "لقد أرسلت عدداً كبيراً من الرسائل في وقت قصير. يرجى الانتظار دقيقة واحدة ثم المتابعة.",
+    en: "You have sent too many messages in a short time. Please wait one minute before continuing."
+  },
+  aiChatServiceUnavailable: {
+    ar: "المساعد الذكي يواجه ضغطاً مؤقتاً أو مشكلة في الاتصال، يرجى المحاولة مرة أخرى بعد لحظات.",
+    en: "The AI assistant is temporarily busy or experiencing a connection issue. Please try again in a moment."
   }
 };
 

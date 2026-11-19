@@ -27,6 +27,7 @@ import { CreateAdminAccunt } from "./Admin/AminAccunt.js"
 import learningAdminRouter from "./Admin/routes/Learning/learning.js"
 import serviceRequestsAdminRouter from "./Admin/routes/services/getServices.js"
 import learningClientRouter from "./router/learning/learning.js"
+import aiChatRouter from "./router/aiChat/aiChat.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -96,6 +97,7 @@ app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
 app.use("/api", supportRouter)
 app.use("/api", learningClientRouter)
+app.use("/api", aiChatRouter)
 
 app.listen(port, () => {
   console.log(`server running is ${port}`)
