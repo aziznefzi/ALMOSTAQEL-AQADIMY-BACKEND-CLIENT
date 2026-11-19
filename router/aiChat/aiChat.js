@@ -4,7 +4,7 @@ import https from "https";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
-import { AiChatMessage } from "../../schema/aiChatMessage.js";
+import { AiChatConversation } from "../../schema/aiChatMessage.js";
 import { BlockedIps } from "../../schema/blockedIps.js";
 import { checkIsBanned } from "../../middleware/spamProtection.js";
 import { getMsg, getLang } from "../../utils/messages.js";
@@ -391,8 +391,7 @@ const generateGeminiReply = async ({ userMessage, history = [], lang = "ar" }) =
   const systemText = buildSystemInstructionText(lang);
   const contents = buildNormalizedContents(history, userMessage);
 
-  // Model configurations ordered by speed & availability:
-  // Note: gemini-3.5-flash-lite supports thinkingLevel: "MINIMAL" (whereas thinkingBudget: 0 returns 400 on v3.5, and gemini-3.8-flash experiences 503 demand spikes)
+  // Model configurations ordered by speed & availability
   const modelConfigs = [
     {
       model: "gemini-3.5-flash-lite",
@@ -411,65 +410,84 @@ const generateGeminiReply = async ({ userMessage, history = [], lang = "ar" }) =
     },
   ];
 
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  const MAX_SERVER_RETRIES = 3; // 1 initial attempt + 3 automatic retries from server to Google Gemini
   let lastError = null;
 
-  for (const cfg of modelConfigs) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const payload = {
-      systemInstruction: {
-        parts: [{ text: systemText }],
-      },
-      contents,
-      generationConfig: {
-        temperature: 0.2,
-        topP: 0.85,
-        maxOutputTokens: 700,
-        ...(cfg.thinkingConfig ? { thinkingConfig: cfg.thinkingConfig } : {}),
-      },
-    };
+  for (let retryIndex = 0; retryIndex <= MAX_SERVER_RETRIES; retryIndex++) {
+    if (retryIndex > 0) {
+      // Short progressive backoff before each retry (500ms, 1000ms, 1500ms)
+      await sleep(retryIndex * 500);
+    }
 
-    try {
-      const response = await axios.post(url, payload, {
-        headers: { "Content-Type": "application/json" },
-        httpsAgent: geminiHttpsAgent,
-        timeout: cfg.timeout,
-      });
+    // Pick primary fast model first; on later retries also rotate through fallback models
+    const modelsThisPass =
+      retryIndex === 0
+        ? [modelConfigs[0]]
+        : modelConfigs;
 
-      const parts = response.data?.candidates?.[0]?.content?.parts || [];
-      const candidateText =
-        parts
-          .filter((p) => !p.thought)
-          .map((p) => p.text || "")
-          .join("")
-          .trim() ||
-        parts
-          .map((p) => p.text || "")
-          .join("")
-          .trim();
+    for (const cfg of modelsThisPass) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${cfg.model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const payload = {
+        systemInstruction: {
+          parts: [{ text: systemText }],
+        },
+        contents,
+        generationConfig: {
+          temperature: 0.2,
+          topP: 0.85,
+          maxOutputTokens: 700,
+          ...(cfg.thinkingConfig ? { thinkingConfig: cfg.thinkingConfig } : {}),
+        },
+      };
 
-      if (candidateText) {
-        // Cache standalone answers in memory so future visitors asking the same question get a <5ms response
-        if (normKey && normKey.length >= 4 && (!Array.isArray(history) || history.length <= 2)) {
-          if (instantAnswerCache.size < 300) {
-            instantAnswerCache.set(normKey, {
-              reply: candidateText,
-              modelUsed: cfg.model,
-            });
+      try {
+        const response = await axios.post(url, payload, {
+          headers: { "Content-Type": "application/json" },
+          httpsAgent: geminiHttpsAgent,
+          timeout: cfg.timeout,
+        });
+
+        const parts = response.data?.candidates?.[0]?.content?.parts || [];
+        const candidateText =
+          parts
+            .filter((p) => !p.thought)
+            .map((p) => p.text || "")
+            .join("")
+            .trim() ||
+          parts
+            .map((p) => p.text || "")
+            .join("")
+            .trim();
+
+        if (candidateText) {
+          // Cache standalone answers in memory so future visitors asking the same question get a <5ms response
+          if (normKey && normKey.length >= 4 && (!Array.isArray(history) || history.length <= 2)) {
+            if (instantAnswerCache.size < 300) {
+              instantAnswerCache.set(normKey, {
+                reply: candidateText,
+                modelUsed: cfg.model,
+              });
+            }
           }
+          return {
+            reply: candidateText,
+            modelUsed: cfg.model,
+          };
         }
-        return {
-          reply: candidateText,
-          modelUsed: cfg.model,
-        };
-      }
-    } catch (err) {
-      lastError = err;
-      // If it's a local network offline/DNS error, stop trying other models immediately
-      if (
-        err.code === "ENOTFOUND" ||
-        err.code === "ECONNREFUSED"
-      ) {
-        break;
+      } catch (err) {
+        lastError = err;
+        const status = err.response?.status;
+
+        // If the API key itself is invalid (401/403), don't waste retries
+        if (status === 401 || status === 403) {
+          throw err;
+        }
+
+        // If local DNS/connection is completely offline, let the outer retry loop wait briefly before retrying
+        if (err.code === "ENOTFOUND" || err.code === "ECONNREFUSED") {
+          break;
+        }
       }
     }
   }
@@ -478,12 +496,14 @@ const generateGeminiReply = async ({ userMessage, history = [], lang = "ar" }) =
 };
 
 /**
- * GET & POST /api/ai-chat/check-ban
- * Pre-check if the visitor's deviceId (or email) is banned before/when opening the AI Chat
+ * GET /api/ai-chat/init (and legacy alias /api/ai-chat/check-ban)
+ * Called ONCE when the user enters the chatbot for the first time:
+ * 1) Checks if the deviceId is banned in BlockedIps.
+ * 2) If banned -> returns 403 { banned: true, errorCode, message }.
+ * 3) If NOT banned -> fetches the device's saved conversation (if any) by deviceId (without userId) and returns it so the frontend caches it in sessionStorage.
  */
-router.all("/ai-chat/check-ban", async (req, res) => {
+const handleInitOrCheckBan = async (req, res) => {
   try {
-    const email = req.query?.email || req.body?.email || null;
     const deviceId =
       req.headers["x-device-id"] ||
       req.headers["device-id"] ||
@@ -494,58 +514,123 @@ router.all("/ai-chat/check-ban", async (req, res) => {
       req.socket.remoteAddress ||
       req.ip;
 
-    if (!deviceId) {
+    if (!deviceId || !String(deviceId).trim()) {
       return res.status(400).json({
         banned: false,
+        messages: [],
         message: getMsg("deviceIdRequired", req),
       });
     }
 
     const cleanDeviceId = String(deviceId).trim();
-    let banStatus = verifiedDeviceBans.get(cleanDeviceId);
 
-    if (!banStatus) {
-      const banCheck = await checkIsBanned({
-        email,
-        deviceId: cleanDeviceId,
-        ipAddress: clientIp,
-      });
+    // Check ban status in DB (and refresh cache on initial entry so fresh bans take effect)
+    const banCheck = await checkIsBanned({
+      deviceId: cleanDeviceId,
+      ipAddress: clientIp,
+    });
 
-      const errKey =
-        banCheck.matchedOn === "email" ? "emailPermanentBan" : "devicePermanentBan";
-
-      banStatus = {
-        isBanned: Boolean(banCheck.isBanned),
-        matchedOn: banCheck.matchedOn || "device",
-        errorCode: errKey,
-        checkedAt: Date.now(),
-      };
-      verifiedDeviceBans.set(cleanDeviceId, banStatus);
-    }
+    const errKey = "devicePermanentBan";
+    const banStatus = {
+      isBanned: Boolean(banCheck.isBanned),
+      matchedOn: banCheck.matchedOn || "device",
+      errorCode: errKey,
+      checkedAt: Date.now(),
+    };
+    verifiedDeviceBans.set(cleanDeviceId, banStatus);
 
     if (banStatus.isBanned) {
-      const errKey = banStatus.errorCode || "devicePermanentBan";
       return res.status(403).json({
         banned: true,
         matchedOn: banStatus.matchedOn,
         errorCode: errKey,
         message: getMsg(errKey, req),
+        messages: [],
       });
     }
 
-    return res.status(200).json({ banned: false });
+    // Device is NOT banned -> Fetch this device's saved conversation (if it exists)
+    const conversation = await AiChatConversation.findOne({
+      deviceId: cleanDeviceId,
+    }).lean();
+
+    const formattedMessages = Array.isArray(conversation?.messages)
+      ? conversation.messages.map((m) => ({
+          id: m._id ? String(m._id) : m.clientMessageId || `${m.sender}-${Date.now()}`,
+          clientMessageId: m.clientMessageId || null,
+          sender: m.sender,
+          text: m.text,
+          createdAt: m.createdAt || new Date().toISOString(),
+        }))
+      : [];
+
+    return res.status(200).json({
+      banned: false,
+      messages: formattedMessages,
+    });
   } catch (err) {
-    console.error("Error in /api/ai-chat/check-ban:", err.message);
+    console.error("Error in /api/ai-chat/init:", err.message);
     return res.status(500).json({
       banned: false,
+      messages: [],
       message: getMsg("serverError", req),
     });
+  }
+};
+
+router.all("/ai-chat/init", handleInitOrCheckBan);
+router.all("/ai-chat/check-ban", handleInitOrCheckBan);
+
+/**
+ * DELETE /api/ai-chat/history
+ * Permanently deletes the conversation document stored for this deviceId (without userId) from MongoDB
+ */
+router.delete("/ai-chat/history", async (req, res) => {
+  try {
+    const deviceId =
+      req.headers["x-device-id"] ||
+      req.headers["device-id"] ||
+      req.query?.deviceId ||
+      req.body?.deviceId;
+
+    if (!deviceId || !String(deviceId).trim()) {
+      return res.status(400).json({ message: getMsg("deviceIdRequired", req) });
+    }
+
+    const cleanDeviceId = String(deviceId).trim();
+    const cachedBan = verifiedDeviceBans.get(cleanDeviceId);
+    if (cachedBan?.isBanned) {
+      return res.status(403).json({
+        banned: true,
+        errorCode: cachedBan.errorCode || "devicePermanentBan",
+        message: getMsg(cachedBan.errorCode || "devicePermanentBan", req),
+      });
+    }
+
+    await AiChatConversation.deleteOne({ deviceId: cleanDeviceId });
+
+    // Also remove any in-memory deduplicated replies belonging to this deviceId
+    const prefix = `${cleanDeviceId}:`;
+    for (const key of completedRepliesCache.keys()) {
+      if (key.startsWith(prefix)) {
+        completedRepliesCache.delete(key);
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: getMsg("aiChatClearedSuccess", req),
+    });
+  } catch (err) {
+    console.error("Error in DELETE /api/ai-chat/history:", err.message);
+    return res.status(500).json({ message: getMsg("serverError", req) });
   }
 });
 
 /**
  * POST /api/ai-chat
- * Main endpoint to verify device ban, apply user-friendly anti-spam, save message in MongoDB, and query Google Gemini
+ * Main endpoint: uses cached device ban status (checked on first entry), applies anti-spam,
+ * queries Google Gemini, and appends the exchange to this deviceId's dedicated conversation in MongoDB (no userId).
  */
 router.post("/ai-chat", async (req, res) => {
   try {
@@ -553,9 +638,6 @@ router.post("/ai-chat", async (req, res) => {
       message,
       history,
       clientMessageId,
-      userId,
-      email,
-      lang,
     } = req.body || {};
 
     const incomingDeviceId =
@@ -576,20 +658,17 @@ router.post("/ai-chat", async (req, res) => {
     }
 
     const cleanDeviceId = String(incomingDeviceId).trim();
-    const cleanEmail = email ? String(email).toLowerCase().trim() : null;
     const resolvedLang = getLang(req);
 
-    // 2. First-Time-Only Device Ban Check (Cached in memory after the first check to avoid DB overhead on every message)
+    // 2. First-Time-Only Device Ban Check (Cached in memory after /init or first check so subsequent messages don't hit DB)
     let banStatus = verifiedDeviceBans.get(cleanDeviceId);
     if (!banStatus) {
       const banCheck = await checkIsBanned({
-        email: cleanEmail,
         deviceId: cleanDeviceId,
         ipAddress: clientIp,
       });
 
-      const errKey =
-        banCheck.matchedOn === "email" ? "emailPermanentBan" : "devicePermanentBan";
+      const errKey = "devicePermanentBan";
 
       banStatus = {
         isBanned: Boolean(banCheck.isBanned),
@@ -643,10 +722,10 @@ router.post("/ai-chat", async (req, res) => {
       });
     }
 
-    // 5. Evaluate Smart Multi-Tier Anti-Spam & Soft Rate Pacing
+    // 5. Evaluate Smart Multi-Tier Anti-Spam & Soft Rate Pacing (strictly by deviceId)
     const rateEval = await evaluateChatRateAndSpam({
       deviceId: cleanDeviceId,
-      email: cleanEmail,
+      email: null,
       ipAddress: clientIp,
       clientMessageId: cleanClientMsgId,
     });
@@ -689,29 +768,47 @@ router.post("/ai-chat", async (req, res) => {
       // Record against the user's conversational rate limit after a successful reply
       recordSuccessfulChatMessage(cleanDeviceId);
 
-      const generatedMsgId = `ai-${Date.now()}`;
+      const nowDate = new Date();
+      const generatedMsgId = `ai-${nowDate.getTime()}`;
       if (dedupKey) {
         completedRepliesCache.set(dedupKey, {
           reply: geminiResult.reply,
           messageId: generatedMsgId,
-          ts: Date.now(),
+          ts: nowDate.getTime(),
         });
       }
 
-      // 7. Persist Message & AI Reply to MongoDB asynchronously in background (does not delay user response!)
-      AiChatMessage.create({
-        deviceId: cleanDeviceId,
-        userId: userId || null,
-        email: cleanEmail,
-        ipAddress: clientIp || null,
+      // 7. Append User Message & AI Reply to this Device's dedicated conversation in MongoDB (strictly by deviceId, NO userId)
+      const userEntry = {
         clientMessageId: cleanClientMsgId,
-        userMessage: cleanMessage,
-        aiResponse: geminiResult.reply,
-        modelUsed: geminiResult.modelUsed,
+        sender: "user",
+        text: cleanMessage,
         lang: resolvedLang,
-        status: "completed",
-      }).catch((dbSaveErr) => {
-        console.error("Background AiChatMessage save error:", dbSaveErr.message);
+        createdAt: nowDate,
+      };
+      const aiEntry = {
+        clientMessageId: cleanClientMsgId,
+        sender: "ai",
+        text: geminiResult.reply,
+        lang: resolvedLang,
+        modelUsed: geminiResult.modelUsed,
+        createdAt: new Date(nowDate.getTime() + 1),
+      };
+
+      AiChatConversation.findOneAndUpdate(
+        { deviceId: cleanDeviceId },
+        {
+          $set: { ipAddress: clientIp || null },
+          $push: {
+            messages: {
+              $each: [userEntry, aiEntry],
+              $slice: -200,
+            },
+          },
+        },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+      ).catch((dbSaveErr) => {
+        console.error("Background AiChatConversation save error:", dbSaveErr.message);
       });
 
       return res.status(200).json({
@@ -719,24 +816,13 @@ router.post("/ai-chat", async (req, res) => {
         reply: geminiResult.reply,
         messageId: generatedMsgId,
         clientMessageId: cleanClientMsgId,
+        createdAt: aiEntry.createdAt.toISOString(),
       });
     } catch (geminiErr) {
       console.error(
         "Gemini API error in /api/ai-chat:",
         geminiErr?.response?.data || geminiErr?.message
       );
-
-      // Persist failed attempt asynchronously in background
-      AiChatMessage.create({
-        deviceId: cleanDeviceId,
-        userId: userId || null,
-        email: cleanEmail,
-        ipAddress: clientIp || null,
-        clientMessageId: cleanClientMsgId,
-        userMessage: cleanMessage,
-        lang: resolvedLang,
-        status: "failed",
-      }).catch(() => {});
 
       const isUpstreamNetworkErr =
         geminiErr?.code === "ENOTFOUND" ||

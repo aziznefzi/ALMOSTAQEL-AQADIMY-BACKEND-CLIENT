@@ -227,6 +227,10 @@ export const messages = {
   aiChatServiceUnavailable: {
     ar: "المساعد الذكي يواجه ضغطاً مؤقتاً أو مشكلة في الاتصال، يرجى المحاولة مرة أخرى بعد لحظات.",
     en: "The AI assistant is temporarily busy or experiencing a connection issue. Please try again in a moment."
+  },
+  aiChatClearedSuccess: {
+    ar: "تم حذف سجل المحادثة بنجاح من قاعدة البيانات.",
+    en: "Conversation history has been permanently deleted."
   }
 };
 

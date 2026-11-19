@@ -1,41 +1,20 @@
 import mongoose from "mongoose";
 
-const aiChatMessageSchema = new mongoose.Schema(
+const chatMessageItemSchema = new mongoose.Schema(
   {
-    deviceId: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      default: null,
-    },
-    email: {
-      type: String,
-      default: null,
-      lowercase: true,
-      trim: true,
-    },
-    ipAddress: {
-      type: String,
-      default: null,
-    },
     clientMessageId: {
       type: String,
       default: null,
       trim: true,
     },
-    userMessage: {
+    sender: {
+      type: String,
+      enum: ["user", "ai"],
+      required: true,
+    },
+    text: {
       type: String,
       required: true,
-      trim: true,
-      maxLength: 1000,
-    },
-    aiResponse: {
-      type: String,
-      default: "",
       trim: true,
     },
     lang: {
@@ -43,14 +22,33 @@ const aiChatMessageSchema = new mongoose.Schema(
       enum: ["ar", "en"],
       default: "ar",
     },
-    status: {
-      type: String,
-      enum: ["pending", "completed", "failed"],
-      default: "pending",
-    },
     modelUsed: {
       type: String,
       default: "",
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+  },
+  { _id: true }
+);
+
+const aiChatConversationSchema = new mongoose.Schema(
+  {
+    deviceId: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true,
+    },
+    ipAddress: {
+      type: String,
+      default: null,
+    },
+    messages: {
+      type: [chatMessageItemSchema],
+      default: [],
     },
   },
   {
@@ -58,12 +56,11 @@ const aiChatMessageSchema = new mongoose.Schema(
   }
 );
 
-aiChatMessageSchema.index({ deviceId: 1, createdAt: -1 });
-aiChatMessageSchema.index({ clientMessageId: 1, deviceId: 1 });
-aiChatMessageSchema.index({ createdAt: -1 });
+aiChatConversationSchema.index({ updatedAt: -1 });
 
-export const AiChatMessage =
-  mongoose.models.AiChatMessage ||
-  mongoose.model("AiChatMessage", aiChatMessageSchema);
+export const AiChatConversation =
+  mongoose.models.AiChatConversation ||
+  mongoose.model("AiChatConversation", aiChatConversationSchema);
 
-export default AiChatMessage;
+export const AiChatMessage = AiChatConversation;
+export default AiChatConversation;
