@@ -32,10 +32,11 @@ try {
   console.error("Failed to load azizCvKnowledge.json:", err.message);
 }
 
-// Pre-stringify compact founder profile once at startup for faster prompt processing
-const COMPACT_FOUNDER_JSON = JSON.stringify(
-  cvKnowledgeData.founder_profile || cvKnowledgeData
-);
+// Pre-stringify compact knowledge base (founder profile + Almostaqel Academy) once at startup for faster prompt processing
+const COMPACT_KNOWLEDGE_JSON = JSON.stringify({
+  founder_profile: cvKnowledgeData.founder_profile || cvKnowledgeData,
+  almostaqel_academy: cvKnowledgeData.almostaqel_academy || {},
+});
 
 /**
  * Build the strict system prompt grounded exclusively in azizCvKnowledge.json
@@ -54,10 +55,12 @@ STRICT RULES:
 6. GROUNDING: ONLY use facts explicitly present in the JSON below. NEVER invent or guess external facts.
 7. SCOPE: NEVER answer topics outside Eng. Aziz Nefzi and Almostaqel Academy. If out-of-scope, politely apologize in 1-2 sentences and direct them to a.nefzi@almostaqelaqademy.com.
 8. LANGUAGE RULE: Detect the language of the visitor's latest message and ALWAYS reply in THAT exact language (even if the site UI language is ${uiLang} or previous messages were in another language).
-9. LINKS FORMATTING RULE: Whenever you share any social media links or website links from the JSON, output each link strictly as a clean Markdown link using the exact URL from the JSON, like: [Facebook](URL) [Instagram](URL) [LinkedIn](URL) [GitHub](URL) [TikTok](URL) [YouTube](URL) — do NOT repeat the platform name before the Markdown link, because the UI automatically renders each link as a clickable badge with its icon and platform name.
+9. LINKS FORMATTING & SEPARATION RULE:
+   - Strictly distinguish between Aziz's Personal Links (LinkedIn, GitHub) and Almostaqel Academy's Official Links (Facebook, Instagram, TikTok, YouTube). If asked only for Aziz's links, share LinkedIn & GitHub; if asked only for the Academy's links, share Facebook, Instagram, TikTok & YouTube; if asked generally for contact/social links, group them neatly under Aziz's Personal Links and Almostaqel Academy's Links.
+   - Whenever you share any social media or website links from the JSON, output each link strictly as a clean Markdown link using the exact URL from the JSON, like: [LinkedIn](URL) [GitHub](URL) [Facebook](URL) [Instagram](URL) [TikTok](URL) [YouTube](URL) — do NOT repeat the platform name before the Markdown link, because the UI automatically renders each link as a clickable badge with its icon and platform name.
 
-FOUNDER DATA (JSON):
-${COMPACT_FOUNDER_JSON}`;
+KNOWLEDGE BASE (JSON):
+${COMPACT_KNOWLEDGE_JSON}`;
 };
 
 /**
@@ -120,7 +123,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("ما هي المشاريع والخدمات التي يقدمها؟"),
     {
       reply:
-        "يطور المهندس عزيز نفزي حلولاً برمجية متنوعة تشمل:\n\n• **أكاديمية المستقل (Almostaqel Academy):** المنصة التعليمية المتكاملة التي أسسها وطوّرها (دورات، مشاريع عملية، تحديات برمجية، ومقالات تقنية).\n• **تطوير البرمجيات:** تطبيقات الويب (Web)، تطبيقات الموبايل (Mobile)، تطبيقات سطح المكتب (Desktop)، السكريبتات (Scripts)، وحتى الألعاب الصغيرة.\n• **الاستشارات التقنية:** مراجعة معمارية الكود وتحسين الأداء.\n\nيمكنك استعراض أعماله عبر:\n[GitHub](https://github.com/aziznefzi) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV) [Almostaqel Academy](https://www.almostaqelaqademy.com)\n\nللتواصل وطلب الخدمات: a.nefzi@almostaqelaqademy.com",
+        "يطور المهندس عزيز نفزي حلولاً برمجية متنوعة تشمل:\n\n• **أكاديمية المستقل (Almostaqel Academy):** المنصة التعليمية التي أسسها وطوّرها (ما زالت في مرحلة البناء مع طموح أن تكون من بين أكبر المنصات التعليمية في المستقبل).\n• **تطوير البرمجيات:** تطبيقات الويب (Web)، تطبيقات الموبايل (Mobile)، تطبيقات سطح المكتب (Desktop)، السكريبتات (Scripts)، وحتى الألعاب الصغيرة.\n• **الاستشارات التقنية:** مراجعة معمارية الكود وتحسين الأداء.\n\n**روابط عزيز الشخصية:**\n[GitHub](https://github.com/aziznefzi) [LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android)\n\n**منصة الأكاديمية:**\n[Almostaqel Academy](https://www.almostaqelaqademy.com) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)\n\nللتواصل وطلب الخدمات: a.nefzi@almostaqelaqademy.com",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -128,7 +131,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("كيف يمكنني التواصل مع عزيز؟"),
     {
       reply:
-        "يسعد المهندس عزيز نفزي بتواصلك معه عبر القنوات والحسابات الرسمية التالية:\n\n• **البريد الإلكتروني الرسمي:** a.nefzi@almostaqelaqademy.com\n• **الهاتف:** +21694093873\n• **الموقع الجغرافي:** تونس، بن عروس\n\n**الروابط والمنصات الرسمية:**\n[Facebook](https://www.facebook.com/profile.php?id=61596644246184) [Instagram](https://www.instagram.com/almostaqelacademy?dmpr=MTgyazF6Z2JndmwwcQ==) [LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android) [GitHub](https://github.com/aziznefzi) [TikTok](https://www.tiktok.com/@almostaqel.academ?_r=1&_t=ZS-9BXSZ4INTvh) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)",
+        "يسعد المهندس عزيز نفزي بتواصلك معه عبر القنوات الرسمية التالية:\n\n• **البريد الإلكتروني الرسمي:** a.nefzi@almostaqelaqademy.com\n• **الهاتف:** +21694093873\n• **الموقع الجغرافي:** تونس، بن عروس\n\n**روابط عزيز الشخصية:**\n[LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android) [GitHub](https://github.com/aziznefzi)\n\n**روابط أكاديمية المستقل:**\n[Facebook](https://www.facebook.com/profile.php?id=61596644246184) [Instagram](https://www.instagram.com/almostaqelacademy?dmpr=MTgyazF6Z2JndmwwcQ==) [TikTok](https://www.tiktok.com/@almostaqel.academ?_r=1&_t=ZS-9BXSZ4INTvh) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -152,7 +155,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("What projects and services does he offer?"),
     {
       reply:
-        "Eng. Aziz Nefzi builds diverse software solutions and services:\n\n• **Almostaqel Academy:** The comprehensive educational platform he founded and built (courses, practical projects, coding challenges, and technical articles).\n• **Software Development:** Desktop applications, mobile applications, web applications, scripts, and small games.\n• **Technical Consultation:** Software architecture review and performance optimization.\n\nExplore his work here:\n[GitHub](https://github.com/aziznefzi) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV) [Almostaqel Academy](https://www.almostaqelaqademy.com)\n\nContact directly via: a.nefzi@almostaqelaqademy.com",
+        "Eng. Aziz Nefzi builds diverse software solutions and services:\n\n• **Almostaqel Academy:** The educational platform he founded and built (currently in the building phase, aiming to become one of the largest educational platforms in the future).\n• **Software Development:** Desktop applications, mobile applications, web applications, scripts, and small games.\n• **Technical Consultation:** Software architecture review and performance optimization.\n\n**Aziz's Personal Links:**\n[GitHub](https://github.com/aziznefzi) [LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android)\n\n**Almostaqel Academy:**\n[Almostaqel Academy](https://www.almostaqelaqademy.com) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)\n\nContact directly via: a.nefzi@almostaqelaqademy.com",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -160,7 +163,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("How can I contact or hire Aziz?"),
     {
       reply:
-        "You can contact or hire Eng. Aziz Nefzi through his official channels:\n\n• **Official Email:** a.nefzi@almostaqelaqademy.com\n• **Phone:** +21694093873\n• **Location:** Tunisia, Ben Arous\n\n**Official Links & Platforms:**\n[Facebook](https://www.facebook.com/profile.php?id=61596644246184) [Instagram](https://www.instagram.com/almostaqelacademy?dmpr=MTgyazF6Z2JndmwwcQ==) [LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android) [GitHub](https://github.com/aziznefzi) [TikTok](https://www.tiktok.com/@almostaqel.academ?_r=1&_t=ZS-9BXSZ4INTvh) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)",
+        "You can contact or hire Eng. Aziz Nefzi through his official channels:\n\n• **Official Email:** a.nefzi@almostaqelaqademy.com\n• **Phone:** +21694093873\n• **Location:** Tunisia, Ben Arous\n\n**Aziz's Personal Links:**\n[LinkedIn](https://www.linkedin.com/in/nefzi-aziz-3b223537a?utm_source=share_via&utm_content=profile&utm_medium=member_android) [GitHub](https://github.com/aziznefzi)\n\n**Almostaqel Academy's Official Links:**\n[Facebook](https://www.facebook.com/profile.php?id=61596644246184) [Instagram](https://www.instagram.com/almostaqelacademy?dmpr=MTgyazF6Z2JndmwwcQ==) [TikTok](https://www.tiktok.com/@almostaqel.academ?_r=1&_t=ZS-9BXSZ4INTvh) [YouTube](https://youtube.com/@almostaqel_aqademy?si=hpxDFtJz-hYwcmiV)",
       modelUsed: "instant-cv-cache",
     },
   ],
