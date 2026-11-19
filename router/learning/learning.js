@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
@@ -47,6 +48,9 @@ const toPublicCatalogItem = (item) => {
   return {
     ...publicFields,
     id: item._id,
+    source: item.source || "admin",
+    excerpt: item.excerpt || item.description || "",
+    excerptAr: item.excerptAr || item.descriptionAr || "",
     availabilityStatus: item.availabilityStatus || "preorder",
     preordersCount,
     lessons: courseVideosCount > 0 ? courseVideosCount : item.lessons || 0,
@@ -80,27 +84,29 @@ router.get("/learning", async (req, res) => {
     const skip = (page - 1) * limit;
 
     // Public safety: ONLY published content is accessible to students
-    const query = { status: "published" };
+    const andConditions = [{ status: "published" }];
 
     // Filter by type
     if (rawType && rawType !== "all") {
       const t = String(rawType).toLowerCase().trim();
-      if (t.includes("course")) query.type = { $in: ["course", "Courses"] };
-      else if (t.includes("article")) query.type = { $in: ["article", "Articles"] };
+      if (t.includes("course")) andConditions.push({ type: { $in: ["course", "Courses"] } });
+      else if (t.includes("article")) andConditions.push({ type: { $in: ["article", "Articles"] } });
       else if (t.includes("all") || t.includes("ai"))
-        query.type = { $in: ["ai-video", "All Vidios", "ai_video"] };
-      else if (t.includes("video")) query.type = { $in: ["video", "Videos"] };
-      else query.type = rawType;
+        andConditions.push({ type: { $in: ["ai-video", "All Vidios", "ai_video"] } });
+      else if (t.includes("video")) andConditions.push({ type: { $in: ["video", "Videos"] } });
+      else andConditions.push({ type: rawType });
     }
 
     // Filter by category
     if (rawCategory && rawCategory !== "all" && rawCategory !== "All") {
-      query.$or = [{ category: rawCategory }, { tag: rawCategory }];
+      andConditions.push({
+        $or: [{ category: rawCategory }, { tag: rawCategory }, { tags: rawCategory }],
+      });
     }
 
     // Filter by level
     if (rawLevel && ["Beginner", "Intermediate", "Advanced"].includes(rawLevel)) {
-      query.level = rawLevel;
+      andConditions.push({ level: rawLevel });
     }
 
     // Safe Search
@@ -108,19 +114,26 @@ router.get("/learning", async (req, res) => {
       const cleanSearch = rawSearch.trim().slice(0, 100);
       if (cleanSearch.length > 0) {
         const regex = new RegExp(escapeRegex(cleanSearch), "i");
-        query.$or = [
-          { title: regex },
-          { titleAr: regex },
-          { description: regex },
-          { descriptionAr: regex },
-          { instructor: regex },
-          { instructorAr: regex },
-          { author: regex },
-          { category: regex },
-          { tag: regex },
-        ];
+        andConditions.push({
+          $or: [
+            { title: regex },
+            { titleAr: regex },
+            { slug: regex },
+            { excerpt: regex },
+            { description: regex },
+            { descriptionAr: regex },
+            { instructor: regex },
+            { instructorAr: regex },
+            { author: regex },
+            { category: regex },
+            { tag: regex },
+            { tags: regex },
+          ],
+        });
       }
     }
+
+    const query = andConditions.length === 1 ? andConditions[0] : { $and: andConditions };
 
     // Sort
     const sortField = ALLOWED_SORT_FIELDS.includes(rawSort) ? rawSort : "createdAt";
@@ -157,8 +170,14 @@ router.get("/learning", async (req, res) => {
 // ============================================================================
 const handleGetProtectedItem = async (req, res) => {
   try {
-    const { id } = req.params;
-    const item = await Learning.findOne({ _id: id, status: "published" }).lean();
+    const rawId = String(req.params.id || "").trim();
+    if (!rawId) {
+      return res.status(404).json({ message: "Learning item not found" });
+    }
+    const identifierFilter = mongoose.isValidObjectId(rawId)
+      ? { $or: [{ _id: rawId }, { slug: rawId.toLowerCase() }] }
+      : { slug: rawId.toLowerCase() };
+    const item = await Learning.findOne({ ...identifierFilter, status: "published" }).lean();
 
     if (!item) {
       return res.status(404).json({ message: "Learning item not found" });
@@ -261,9 +280,15 @@ router.post("/learning/:id", userAuth, handleGetProtectedItem);
 // ============================================================================
 router.patch("/learning/:id/view", async (req, res) => {
   try {
-    const { id } = req.params;
+    const rawId = String(req.params.id || "").trim();
+    if (!rawId) {
+      return res.status(404).json({ message: "Learning item not found" });
+    }
+    const identifierFilter = mongoose.isValidObjectId(rawId)
+      ? { $or: [{ _id: rawId }, { slug: rawId.toLowerCase() }] }
+      : { slug: rawId.toLowerCase() };
     const item = await Learning.findOneAndUpdate(
-      { _id: id, status: "published" },
+      { ...identifierFilter, status: "published" },
       { $inc: { views: 1 } },
       { new: true, select: "views" }
     ).lean();

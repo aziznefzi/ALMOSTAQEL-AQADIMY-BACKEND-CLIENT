@@ -59,6 +59,24 @@ const learningSchema = new mongoose.Schema(
       trim: true,
       maxLength: 200,
     },
+    slug: {
+      type: String,
+      trim: true,
+      lowercase: true,
+      maxLength: 160,
+    },
+    excerpt: {
+      type: String,
+      default: "",
+      trim: true,
+      maxLength: 600,
+    },
+    excerptAr: {
+      type: String,
+      default: "",
+      trim: true,
+      maxLength: 600,
+    },
     description: {
       type: String,
       default: "",
@@ -90,11 +108,60 @@ const learningSchema = new mongoose.Schema(
       default: "General",
       trim: true,
     },
+    tags: {
+      type: [String],
+      default: [],
+    },
+    source: {
+      type: String,
+      enum: ["admin", "ai_agent"],
+      default: "admin",
+      index: true,
+    },
     status: {
       type: String,
-      enum: ["published", "draft", "archived"],
+      enum: ["pending", "published", "draft", "archived"],
       default: "published",
       index: true,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Users",
+      default: null,
+    },
+    seo: {
+      metaTitle: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 160,
+      },
+      metaDescription: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 320,
+      },
+      keywords: {
+        type: [String],
+        default: [],
+      },
+      canonicalUrl: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 500,
+      },
+      ogImage: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 500,
+      },
     },
     availabilityStatus: {
       type: String,
@@ -243,9 +310,17 @@ const learningSchema = new mongoose.Schema(
 
 // Performance Indexes for Pagination, Search, and Filtering
 learningSchema.index({ type: 1, status: 1, createdAt: -1 });
+learningSchema.index({ type: 1, source: 1, status: 1, createdAt: -1 });
 learningSchema.index({ type: 1, category: 1, status: 1 });
 learningSchema.index({ status: 1, views: -1 });
 learningSchema.index({ status: 1, enrollments: -1 });
+learningSchema.index(
+  { slug: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { slug: { $type: "string", $gt: "" } },
+  }
+);
 
 export const Learning = mongoose.model("Learning", learningSchema);
 export default Learning;

@@ -1,4 +1,5 @@
 import express from "express";
+import mongoose from "mongoose";
 import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
@@ -8,19 +9,28 @@ const router = express.Router();
 
 // ============================================================================
 // GET & POST /api/learning/articles/:id - Protected Article Content
+// Supports lookup by MongoDB _id or slug; strictly requires status === "published".
 // Requires authenticated user + confirmed purchase if paid (priceAfter > 0)
 // ============================================================================
 const handleGetProtectedArticle = async (req, res) => {
   try {
-    const { id } = req.params;
+    const rawId = String(req.params.id || "").trim();
+    if (!rawId) {
+      return res.status(404).json({ message: getMsg("articleNotFound", req) });
+    }
+
+    const identifierFilter = mongoose.isValidObjectId(rawId)
+      ? { $or: [{ _id: rawId }, { slug: rawId.toLowerCase() }] }
+      : { slug: rawId.toLowerCase() };
+
     const article = await Learning.findOne({
-      _id: id,
+      ...identifierFilter,
       status: "published",
       type: { $in: ["Articles", "article"] },
     }).lean();
 
     if (!article) {
-      return res.status(404).json({ message: "Article not found" });
+      return res.status(404).json({ message: getMsg("articleNotFound", req) });
     }
 
     const availability = article.availabilityStatus || "preorder";
@@ -88,7 +98,7 @@ const handleGetProtectedArticle = async (req, res) => {
     await Learning.updateOne({ _id: article._id }, { $inc: { views: 1 } });
 
     return res.status(200).json({
-      item: { ...article, id: article._id },
+      item: { ...article, id: article._id, source: article.source || "admin" },
     });
   } catch (err) {
     console.error("Error in protected article route:", err);

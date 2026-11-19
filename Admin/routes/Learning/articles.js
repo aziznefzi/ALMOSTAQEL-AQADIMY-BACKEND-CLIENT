@@ -1,18 +1,22 @@
 import express from "express";
+import mongoose from "mongoose";
 import { Learning } from "../../../schema/learning.js";
 import { AdminAuth } from "../../Auth/Madlware.js";
+import { getMsg } from "../../../utils/messages.js";
 
 const router = express.Router();
 
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ALLOWED_SORT_FIELDS = ["createdAt", "updatedAt", "title", "views", "readTime", "rating"];
-const ALLOWED_STATUS_FILTERS = ["all", "published", "draft", "archived"];
+const ALLOWED_STATUS_FILTERS = ["all", "pending", "published", "draft", "archived"];
+const ALLOWED_ARTICLE_STATUSES = ["pending", "published", "draft", "archived"];
 
 const formatArticleDoc = (doc) => {
   const obj = typeof doc.toObject === "function" ? doc.toObject() : doc;
   return {
     ...obj,
     id: obj._id,
+    source: obj.source || "admin",
   };
 };
 
@@ -48,11 +52,14 @@ const handleGetArticles = async (req, res) => {
         query.$or = [
           { title: regex },
           { titleAr: regex },
+          { slug: regex },
+          { excerpt: regex },
           { description: regex },
           { descriptionAr: regex },
           { author: regex },
           { category: regex },
           { tag: regex },
+          { tags: regex },
         ];
       }
     }
@@ -115,12 +122,16 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
     const {
       title,
       titleAr,
+      slug,
+      excerpt,
+      excerptAr,
       description,
       descriptionAr,
       content,
       contentAr,
       category,
       tag,
+      tags,
       author,
       instructor,
       readTime,
@@ -131,32 +142,44 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       imageDataUrl,
       stack,
       rating,
+      seo,
     } = req.body;
 
     if (!title || !title.trim()) {
       return res.status(400).json({ message: "Article title is required" });
     }
 
+    const normalizedTags = Array.isArray(tags)
+      ? tags.map((t) => String(t).trim()).filter(Boolean)
+      : [];
+    const cleanSlug = typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : undefined;
+
     const newArticle = await Learning.create({
       type: "article",
+      source: "admin",
       title: title.trim(),
       titleAr: titleAr?.trim() || "",
-      description: description?.trim() || "",
-      descriptionAr: descriptionAr?.trim() || "",
+      ...(cleanSlug ? { slug: cleanSlug } : {}),
+      excerpt: excerpt?.trim() || description?.trim() || "",
+      excerptAr: excerptAr?.trim() || descriptionAr?.trim() || "",
+      description: description?.trim() || excerpt?.trim() || "",
+      descriptionAr: descriptionAr?.trim() || excerptAr?.trim() || "",
       content: content?.trim() || description?.trim() || "",
       contentAr: contentAr?.trim() || descriptionAr?.trim() || "",
       category: category?.trim() || "Tech Insights",
-      tag: tag?.trim() || category?.trim() || "General",
+      tag: tag?.trim() || normalizedTags[0] || category?.trim() || "General",
+      tags: normalizedTags,
       author: author?.trim() || instructor?.trim() || "",
       instructor: instructor?.trim() || author?.trim() || "",
       readTime: Number(readTime) || 5,
       price: Number(price) || 0,
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
-      status: ["published", "draft", "archived"].includes(status) ? status : "published",
+      status: ALLOWED_ARTICLE_STATUSES.includes(status) ? status : "published",
       rating: Number(rating) || 5.0,
       image: image?.trim() || "",
       imageDataUrl: imageDataUrl || "",
       stack: Array.isArray(stack) ? stack : [],
+      ...(seo && typeof seo === "object" && !Array.isArray(seo) ? { seo } : {}),
     });
 
     res.status(201).json({
@@ -182,12 +205,16 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
     const updatable = [
       "title",
       "titleAr",
+      "slug",
+      "excerpt",
+      "excerptAr",
       "description",
       "descriptionAr",
       "content",
       "contentAr",
       "category",
       "tag",
+      "tags",
       "author",
       "instructor",
       "readTime",
@@ -198,11 +225,17 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
       "imageDataUrl",
       "stack",
       "rating",
+      "seo",
     ];
 
     for (const key of updatable) {
       if (req.body[key] !== undefined) {
-        article[key] = req.body[key];
+        if (key === "slug") {
+          const cleanSlug = typeof req.body.slug === "string" ? req.body.slug.trim().toLowerCase() : "";
+          article.slug = cleanSlug || undefined;
+        } else {
+          article[key] = req.body[key];
+        }
       }
     }
 
@@ -228,7 +261,7 @@ router.patch("/learning/articles/:id/status", AdminAuth, async (req, res) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
-    if (req.body.status && ["published", "draft", "archived"].includes(req.body.status)) {
+    if (req.body.status && ALLOWED_ARTICLE_STATUSES.includes(req.body.status)) {
       article.status = req.body.status;
     } else {
       article.status = article.status === "published" ? "archived" : "published";
@@ -246,6 +279,66 @@ router.patch("/learning/articles/:id/status", AdminAuth, async (req, res) => {
     res.status(500).json({ message: "Failed to update article status" });
   }
 });
+
+// ============================================================================
+// 5B. PATCH /api/articles/:id/approve & PATCH /admin/learning/articles/:id/approve
+// Admin approval workflow: publishes a pending AI Agent article
+// ============================================================================
+export const handleApproveArticle = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.isValidObjectId(id)) {
+      return res.status(400).json({
+        success: false,
+        message: getMsg("invalidArticleId", req),
+      });
+    }
+
+    const article = await Learning.findOne({
+      _id: id,
+      type: { $in: ["article", "Articles"] },
+    });
+
+    if (!article) {
+      return res.status(404).json({
+        success: false,
+        message: getMsg("articleNotFound", req),
+      });
+    }
+
+    article.status = "published";
+    if (!article.availabilityStatus || article.availabilityStatus === "preorder") {
+      article.availabilityStatus = "available";
+    }
+    article.approvedAt = new Date();
+    if (req.admin?._id) {
+      article.approvedBy = req.admin._id;
+    }
+
+    await article.save();
+
+    const formatted = formatArticleDoc(article);
+    return res.status(200).json({
+      success: true,
+      message: getMsg("articleApprovedSuccess", req),
+      article: formatted,
+      item: formatted,
+    });
+  } catch (err) {
+    console.error("Error in PATCH /api/articles/:id/approve:", err);
+    return res.status(500).json({
+      success: false,
+      message: getMsg("serverError", req),
+    });
+  }
+};
+
+router.patch("/learning/articles/:id/approve", AdminAuth, handleApproveArticle);
+
+// Dedicated router mounted at `/api` on adminApp so `PATCH /api/articles/:id/approve`
+// is directly accessible to the Admin Dashboard and protected by AdminAuth.
+export const articlesAdminApprovalRouter = express.Router();
+articlesAdminApprovalRouter.patch("/articles/:id/approve", AdminAuth, handleApproveArticle);
 
 // ============================================================================
 // 6. DELETE /admin/learning/articles/:id - Delete Article

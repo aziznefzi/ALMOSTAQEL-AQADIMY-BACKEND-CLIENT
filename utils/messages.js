@@ -231,6 +231,42 @@ export const messages = {
   aiChatClearedSuccess: {
     ar: "تم حذف سجل المحادثة بنجاح من قاعدة البيانات.",
     en: "Conversation history has been permanently deleted."
+  },
+  agentApiKeyMissing: {
+    ar: "غير مصرح: مفتاح الواجهة البرمجية (x-api-key) مفقود.",
+    en: "Unauthorized: Missing API key header (x-api-key)."
+  },
+  agentApiKeyUnauthorized: {
+    ar: "غير مصرح: مفتاح الواجهة البرمجية غير صالح.",
+    en: "Unauthorized: Invalid API key."
+  },
+  agentRateLimitExceeded: {
+    ar: "تم تجاوز الحد المسموح به للطلبات. يرجى المحاولة مجدداً بعد قليل.",
+    en: "Too many requests from this AI agent client. Please try again later."
+  },
+  articleValidationFailed: {
+    ar: "فشل التحقق من صحة بيانات المقال. يرجى مراجعة الحقول المرسلة.",
+    en: "Article validation failed. Please check the submitted fields."
+  },
+  articleSlugExists: {
+    ar: "يوجد مقال آخر بنفس الرابط المختصر (slug) بالفعل.",
+    en: "An article with this slug already exists."
+  },
+  articleCreatedPending: {
+    ar: "تم استلام المقال بنجاح وهو الآن بانتظار مراجعة وتأكيد النشر من الإدارة.",
+    en: "Article submitted successfully and is pending admin review and approval."
+  },
+  articleNotFound: {
+    ar: "المقال المطلوب غير موجود.",
+    en: "Article not found."
+  },
+  invalidArticleId: {
+    ar: "معرّف المقال غير صالح.",
+    en: "Invalid article ID."
+  },
+  articleApprovedSuccess: {
+    ar: "تم تأكيد نشر المقال بنجاح وأصبح متاحاً للعموم.",
+    en: "Article approved and published successfully."
   }
 };
 

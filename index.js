@@ -25,8 +25,10 @@ import mongoose from "mongoose"
 import bcrypt from "bcrypt"
 import { CreateAdminAccunt } from "./Admin/AminAccunt.js"
 import learningAdminRouter from "./Admin/routes/Learning/learning.js"
+import { articlesAdminApprovalRouter } from "./Admin/routes/Learning/articles.js"
 import serviceRequestsAdminRouter from "./Admin/routes/services/getServices.js"
 import learningClientRouter from "./router/learning/learning.js"
+import articlesAgentRouter from "./router/learning/articlesAgent.js"
 import aiChatRouter from "./router/aiChat/aiChat.js"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -73,7 +75,7 @@ app.use(cors({
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language", "x-api-key"]
 }));
 
 
@@ -96,6 +98,7 @@ app.use("/auth", googleAuth)
 app.use("/auth", forgotPassword)
 app.use("/api", servicesRouter)
 app.use("/api", supportRouter)
+app.use("/api", articlesAgentRouter)
 app.use("/api", learningClientRouter)
 app.use("/api", aiChatRouter)
 
@@ -124,6 +127,7 @@ app.listen(port, () => {
 // adminApp.use("/admin/", getSupport)
 // adminApp.use("/admin/", learningAdminRouter)
 // adminApp.use("/admin/", serviceRequestsAdminRouter)
+// adminApp.use("/api", articlesAdminApprovalRouter)
 
 // // Bind to loopback only so the admin API is never exposed externally
 // adminApp.listen(adminPort, "127.0.0.1", () => {

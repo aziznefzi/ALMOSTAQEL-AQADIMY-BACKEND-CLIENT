@@ -98,7 +98,7 @@ router.use(learningVideoRouter);
 const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 const ALLOWED_SORT_FIELDS = ["createdAt", "updatedAt", "title", "views", "enrollments", "rating"];
-const ALLOWED_STATUS_FILTERS = ["all", "published", "draft", "archived"];
+const ALLOWED_STATUS_FILTERS = ["all", "pending", "published", "draft", "archived"];
 
 const resolveTypeFilter = (rawType) => {
   if (!rawType || rawType === "all") return null;
@@ -235,6 +235,7 @@ router.get("/learning", AdminAuth, async (req, res) => {
       items: items.map((i) => ({
         ...i,
         id: i._id,
+        source: i.source || "admin",
         courseVideos: Array.isArray(i.courseVideos)
           ? i.courseVideos.map((v) => ({ ...v, id: v._id }))
           : [],
@@ -326,6 +327,7 @@ router.post("/learning", AdminAuth, async (req, res) => {
 
     const newItem = await Learning.create({
       type: normalizedType,
+      source: "admin",
       title: title.trim(),
       titleAr: titleAr?.trim() || "",
       description: description?.trim() || "",
@@ -349,7 +351,7 @@ router.post("/learning", AdminAuth, async (req, res) => {
       readTime: Number(readTime) || 0,
       price: Number(price) || 0,
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
-      status: ["published", "draft", "archived"].includes(status) ? status : "published",
+      status: ["pending", "published", "draft", "archived"].includes(status) ? status : "published",
       enrollments: Number(enrollments) || 0,
       views: Number(views) || 0,
       rating: Number(rating) || 5.0,
@@ -444,7 +446,7 @@ router.patch("/learning/:id/status", AdminAuth, async (req, res) => {
       return res.status(404).json({ message: "Learning item not found" });
     }
 
-    if (req.body.status && ["published", "draft", "archived"].includes(req.body.status)) {
+    if (req.body.status && ["pending", "published", "draft", "archived"].includes(req.body.status)) {
       item.status = req.body.status;
     } else {
       item.status = item.status === "published" ? "draft" : "published";

@@ -537,6 +537,7 @@ const handleGetMyOrders = async (req, res) => {
             .lean()
         : [],
       Learning.find({
+        status: "published",
         $or: [
           { "preorders.userId": req.user.userId },
           ...(req.dbUser?.email
