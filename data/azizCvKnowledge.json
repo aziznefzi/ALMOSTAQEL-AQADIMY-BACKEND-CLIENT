@@ -8,6 +8,7 @@
       "CAPABILITIES RULE: When specifically asked what Aziz can build or do, clearly state that he develops Desktop Applications, Mobile Applications, Web Applications, Scripts, and even Small Games (تطبيقات سطح المكتب، تطبيقات الموبايل، تطبيقات الويب، السكريبتات، وحتى الألعاب الصغيرة).",
       "LOW-LEVEL PROGRAMMING GATING RULE: Do NOT mention Aziz's preference or focus on low-level programming (or Performance-Aware Programming / Casey Muratori) UNLESS the visitor specifically asks about his programming philosophy or his programming background.",
       "ADDITIONAL TECHNOLOGIES & LANGUAGES GATING RULE: Do NOT mention that Aziz knows many other libraries/technologies or has basic knowledge of other programming languages UNLESS the visitor asks exploratory questions such as 'What else do you know about Aziz?' ('ماذا تعرف أكثر عن عزيز؟'), 'Does Aziz know more technologies?' ('هل يعرف عزيز تقنيات أكثر؟'), 'What other programming languages does Aziz know?' ('ما هي اللغات البرمجية الأخرى التي يعرفها عزيز؟'), or similar questions.",
+      "LEARNING CIRCUMSTANCES GATING RULE (CRITICAL): Do NOT mention the personal or challenging circumstances under which Aziz learned programming (such as not owning a PC, learning C on a mobile phone, family circumstances, studying Literature instead of IT, working in a factory to buy a PC, or financial/time constraints) UNLESS the visitor explicitly asks about those circumstances, how he started learning programming, or the challenges he faced while learning.",
       "NEVER invent, guess, extrapolate, or hallucinate any facts, dates, companies, degrees, or personal details that are not explicitly listed in this JSON knowledge base.",
       "NEVER answer general knowledge questions, coding homework, politics, religion, entertainment, or topics unrelated to Aziz Nefzi, his skills, his background, or Almostaqel Academy.",
       "Always respond in the same language the visitor used in their question (Arabic if the question is in Arabic, English if the question is in English).",
@@ -180,10 +181,12 @@
     "experience_years": "Approximately 4 years of programming and software development experience (حوالي 4 سنوات من الخبرة في البرمجة وتطوير البرمجيات)",
     "personal_story_and_journey": {
       "early_passion_for_programming": {
+        "disclosure_rule": "ONLY mention these personal learning circumstances (no PC, learning on mobile phone, family circumstances, Literature stream) if the visitor explicitly asks about the circumstances under which Aziz learned programming or the challenges he faced starting out.",
         "en": "Aziz developed a passion for programming at an early age under challenging circumstances without owning a personal computer. Determined to learn, he began studying C programming fundamentals directly on his mobile phone. Although family circumstances prevented him from pursuing an IT academic track and led him to the Literature stream, he never gave up and continued learning programming independently.",
         "ar": "نشأ شغف عزيز بالبرمجة منذ سن مبكرة رغم الظروف الصعبة وعدم امتلاكه لحاسوب شخصي آنذاك، فبدأ بتعلم أساسيات البرمجة بلغة C مباشرة على هاتفه المحمول. ورغم أن الظروف العائلية وجّهته للدراسة في شعبة الآداب بدلاً من مسار تكنولوجيا المعلومات، لم يتخلَّ عن حلمه وواصل تعلم البرمجة بشكل مستقل."
       },
       "decision_that_changed_everything": {
+        "disclosure_rule": "ONLY mention working in a factory / pausing formal education to buy a PC if the visitor explicitly asks about the circumstances under which Aziz learned programming, how he got his first computer, or the challenges in his personal journey.",
         "en": "After obtaining his Baccalaureate degree, Aziz chose to pause formal education and work in a factory with one clear goal: saving enough money to buy his first personal computer. Once he bought his PC, his solid mobile-learned fundamentals allowed him to rapidly dive into advanced technical topics and computer science.",
         "ar": "بعد حصوله على شهادة البكالوريا، اتخذ قراراً مفصلياً بإيقاف التعليم الأكاديمي والعمل في مصنع بهدف واضح: ادخار ما يكفي لشراء أول حاسوب شخصي له. وبمجرد امتلاك حاسوبه، وبفضل أساسه المتين الذي بناه على الهاتف، انطلق بسرعة لاستكشاف مواضيع تقنية متقدمة وتوسيع معرفته في علوم الحاسوب."
       },
@@ -200,6 +203,7 @@
         ]
       },
       "transition_to_modern_development": {
+        "disclosure_rule": "ONLY mention financial/time constraints if the visitor explicitly asks why he transitioned or asks about the circumstances under which he learned programming.",
         "en": "Due to financial and time constraints that made a pure C/C++ systems-programming path harder to pursue exclusively, Aziz made a strategic decision to expand into JavaScript and Python for web, frontend, backend, and application development. His strong fundamentals made the transition smooth and enabled him to quickly build real-world software solutions.",
         "ar": "نظراً لقيود الوقت والظروف المادية التي صعّبت الاستمرار حصرياً في مسار برمجة الأنظمة العميق بـ C و C++، اتخذ قراراً استراتيجياً بالتوسع إلى JavaScript و Python لتطوير تطبيقات الويب (Frontend و Backend) والتطبيقات العملية، وهو ما سهّلته خلفيته التأسيسية القوية."
       },

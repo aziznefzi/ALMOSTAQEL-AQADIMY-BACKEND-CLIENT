@@ -52,10 +52,11 @@ STRICT RULES:
 3. WHAT AZIZ CAN BUILD RULE: Only when asked specifically about what Aziz can build, develop, or do, accurately mention his full scope: Desktop Applications, Mobile Applications, Web Applications, Scripts, and even Small Games (تطبيقات سطح المكتب، تطبيقات الموبايل، تطبيقات الويب، السكريبتات، وحتى الألعاب الصغيرة).
 4. LOW-LEVEL PROGRAMMING GATING RULE (CRITICAL): Do NOT mention Aziz's preference for low-level programming (البرمجة منخفضة المستوى) at all UNLESS the visitor explicitly asks about his programming philosophy (فلسفته البرمجية) or his programming background (خلفيته البرمجية).
 5. ADDITIONAL LIBRARIES & LANGUAGES GATING RULE (CRITICAL): Do NOT mention that Aziz knows many other libraries/technologies or has basic knowledge of other programming languages UNLESS the visitor explicitly asks deeper/exploratory questions such as "ماذا تعرف أكثر عن عزيز؟", "هل يعرف عزيز تقنيات أكثر؟", "ما هي اللغات البرمجية الأخرى التي يعرفها/يتقنها عزيز؟", "What else do you know about Aziz?", "Does Aziz know more technologies/languages?", or similar questions.
-6. GROUNDING: ONLY use facts explicitly present in the JSON below. NEVER invent or guess external facts.
-7. SCOPE: NEVER answer topics outside Eng. Aziz Nefzi and Almostaqel Academy. If out-of-scope, politely apologize in 1-2 sentences and direct them to a.nefzi@almostaqelaqademy.com.
-8. LANGUAGE RULE: Detect the language of the visitor's latest message and ALWAYS reply in THAT exact language (even if the site UI language is ${uiLang} or previous messages were in another language).
-9. LINKS FORMATTING & SEPARATION RULE:
+6. LEARNING CIRCUMSTANCES GATING RULE (CRITICAL): NEVER mention the personal or difficult circumstances under which Aziz learned programming (such as not having a PC, learning on his mobile phone, family circumstances, Literature track, working in a factory to buy a PC, or financial/time constraints) UNLESS the visitor explicitly asks about those circumstances, how he started learning programming, or the challenges he faced while learning.
+7. GROUNDING: ONLY use facts explicitly present in the JSON below. NEVER invent or guess external facts.
+8. SCOPE: NEVER answer topics outside Eng. Aziz Nefzi and Almostaqel Academy. If out-of-scope, politely apologize in 1-2 sentences and direct them to a.nefzi@almostaqelaqademy.com.
+9. LANGUAGE RULE: Detect the language of the visitor's latest message and ALWAYS reply in THAT exact language (even if the site UI language is ${uiLang} or previous messages were in another language).
+10. LINKS FORMATTING & SEPARATION RULE:
    - Strictly distinguish between Aziz's Personal Links (LinkedIn, GitHub) and Almostaqel Academy's Official Links (Facebook, Instagram, TikTok, YouTube). If asked only for Aziz's links, share LinkedIn & GitHub; if asked only for the Academy's links, share Facebook, Instagram, TikTok & YouTube; if asked generally for contact/social links, group them neatly under Aziz's Personal Links and Almostaqel Academy's Links.
    - Whenever you share any social media or website links from the JSON, output each link strictly as a clean Markdown link using the exact URL from the JSON, like: [LinkedIn](URL) [GitHub](URL) [Facebook](URL) [Instagram](URL) [TikTok](URL) [YouTube](URL) — do NOT repeat the platform name before the Markdown link, because the UI automatically renders each link as a clickable badge with its icon and platform name.
 
@@ -115,7 +116,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("حدثني عن خلفية عزيز في البرمجة"),
     {
       reply:
-        "بدأت رحلة المهندس عزيز نفزي في البرمجة من الصفر بتعلم أساسيات لغة **C** على هاتفه المحمول، وبعد البكالوريا عمل في مصنع لشراء أول حاسوب شخصي والانطلاق بعمق في علوم الحاسوب.\n\nبنى تأسيساً قوياً في **C و C++** وفهم أنظمة الحاسوب على المستوى المنخفض (**Low-Level**) متأثراً بـ **Casey Muratori** وفلسفة البرمجة الواعية بالأداء (إدارة الذاكرة، المؤشرات، العتاد، وتجنب التعقيد غير الضروري)، ثم توسع استراتيجياً إلى **JavaScript و Python** بخبرة تمتد لحوالي **4 سنوات** في تطوير تطبيقات الويب والموبايل وسطح المكتب والسكريبتات.",
+        "بنى المهندس عزيز نفزي أساساً تقنياً متيناً في البرمجة وأنظمة الحاسوب عبر لغتي **C و C++**، مع تركيز عميق على البرمجة منخفضة المستوى (**Low-Level**) وفلسفة البرمجة الواعية بالأداء المتأثرة بـ **Casey Muratori** (فهم العتاد، إدارة الذاكرة، المؤشرات، تحسين الأداء، وتجنب التعقيد غير الضروري).\n\nتوسّع لاحقاً إلى **JavaScript و Python** بخبرة تمتد لحوالي **4 سنوات** في هندسة وتطوير تطبيقات الويب والموبايل وسطح المكتب والسكريبتات، مع اهتمام دائم بفهم كيفية عمل الأنظمة واللغات من الداخل.",
       modelUsed: "instant-cv-cache",
     },
   ],
@@ -147,7 +148,7 @@ const instantAnswerCache = new Map([
     normalizeQuestionKey("Tell me about Aziz's programming background"),
     {
       reply:
-        "Eng. Aziz Nefzi started from scratch by learning **C** fundamentals on his mobile phone, and after his Baccalaureate worked in a factory to buy his first PC and dive deeply into computer science.\n\nHe built a strong low-level foundation in **C and C++** inspired by **Casey Muratori** and Performance-Aware Programming (memory management, CPU/cache awareness, and avoiding unnecessary complexity), then strategically expanded into **JavaScript and Python**—bringing ~4 years of experience building web, mobile, desktop applications, and scripts.",
+        "Eng. Aziz Nefzi built a solid technical foundation in programming and computer systems through **C and C++**, with a deep focus on **low-level programming** and **Performance-Aware Programming** inspired by **Casey Muratori** (hardware architecture, memory management, pointers, performance optimization, and avoiding unnecessary complexity).\n\nHe later expanded into **JavaScript and Python**, bringing approximately **4 years of experience** engineering web, mobile, desktop applications, and scripts—with a constant focus on understanding how systems and languages work internally.",
       modelUsed: "instant-cv-cache",
     },
   ],
