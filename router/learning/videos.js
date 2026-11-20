@@ -3,6 +3,7 @@ import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
+import { resolveVideoPlaybackForUser } from "../../utils/mediaValidation.js";
 
 const router = express.Router();
 
@@ -88,8 +89,24 @@ const handleGetProtectedVideo = async (req, res) => {
 
     await Learning.updateOne({ _id: video._id }, { $inc: { views: 1 } });
 
+    const { imageDataUrl, ...safeVideo } = video;
+    const resolvedPlayback = resolveVideoPlaybackForUser(video);
+    const deliveryImage =
+      video.thumbnail?.url ||
+      (video.image && !String(video.image).startsWith("data:")
+        ? video.image
+        : imageDataUrl
+        ? `/api/learning/${video._id}/image`
+        : "");
+
     return res.status(200).json({
-      item: { ...video, id: video._id },
+      item: {
+        ...safeVideo,
+        id: video._id,
+        image: deliveryImage,
+        videoUrl: resolvedPlayback.playbackUrl || video.videoUrl || "",
+        videoMedia: resolvedPlayback,
+      },
     });
   } catch (err) {
     console.error("Error in protected video route:", err);

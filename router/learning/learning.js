@@ -7,6 +7,7 @@ import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
+import { resolveVideoPlaybackForUser } from "../../utils/mediaValidation.js";
 import coursesRouter from "./courses.js";
 import articlesRouter from "./articles.js";
 import videosRouter from "./videos.js";
@@ -95,7 +96,7 @@ const ALLOWED_SORT_FIELDS = [
   "title",
 ];
 
-// Strip protected media/article body from public catalog cards
+// Strip protected media/article body AND bulky legacy Base64 data from public catalog cards
 const toPublicCatalogItem = (item) => {
   const courseVideosCount = Array.isArray(item.courseVideos)
     ? item.courseVideos.length
@@ -106,15 +107,37 @@ const toPublicCatalogItem = (item) => {
   const {
     courseVideos,
     videoUrl,
+    videoMedia,
     content,
     contentAr,
     preorders,
+    imageDataUrl,
     ...publicFields
   } = item;
+
+  const thumbnailUrl = item.thumbnail?.url || item.image || "";
+  const isExternalUrl =
+    thumbnailUrl.startsWith("https://") || thumbnailUrl.startsWith("http://");
+  // For legacy items whose binary still lives in MongoDB imageDataUrl, serve via
+  // cacheable binary URL `/api/learning/:id/image` instead of shipping megabytes of Base64 JSON!
+  const deliveryImage = isExternalUrl
+    ? thumbnailUrl
+    : thumbnailUrl && thumbnailUrl.startsWith("/uploads/")
+    ? thumbnailUrl
+    : imageDataUrl
+    ? `/api/learning/${item._id}/image`
+    : "";
 
   return {
     ...publicFields,
     id: item._id,
+    image: deliveryImage,
+    thumbnail: {
+      url: deliveryImage,
+      provider: item.thumbnail?.provider || (isExternalUrl ? "custom" : deliveryImage ? "legacy" : ""),
+      publicId: item.thumbnail?.publicId || "",
+      alt: item.thumbnail?.alt || item.title || "",
+    },
     source: item.source || "admin",
     excerpt: item.excerpt || item.description || "",
     excerptAr: item.excerptAr || item.descriptionAr || "",
@@ -373,10 +396,23 @@ const handleGetProtectedItem = async (req, res) => {
         }))
       : [];
 
+    const { imageDataUrl, ...safeItem } = item;
+    const deliveryImage =
+      item.thumbnail?.url ||
+      (item.image && !String(item.image).startsWith("data:")
+        ? item.image
+        : imageDataUrl
+        ? `/api/learning/${item._id}/image`
+        : "");
+    const resolvedPlayback = resolveVideoPlaybackForUser(item);
+
     return res.status(200).json({
       item: {
-        ...item,
+        ...safeItem,
         id: item._id,
+        image: deliveryImage,
+        videoUrl: resolvedPlayback.playbackUrl || item.videoUrl || "",
+        videoMedia: resolvedPlayback,
         courseVideos,
         lessons: courseVideos.length > 0 ? courseVideos.length : item.lessons || 0,
       },

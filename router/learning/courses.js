@@ -17,9 +17,19 @@ const formatCourseForStudent = (doc) => {
       }))
     : [];
 
+  const { imageDataUrl, ...safeObj } = obj;
+  const deliveryImage =
+    obj.thumbnail?.url ||
+    (obj.image && !String(obj.image).startsWith("data:")
+      ? obj.image
+      : imageDataUrl
+      ? `/api/learning/${obj._id}/image`
+      : "");
+
   return {
-    ...obj,
+    ...safeObj,
     id: obj._id,
+    image: deliveryImage,
     courseVideos,
     lessons: courseVideos.length > 0 ? courseVideos.length : obj.lessons || 0,
   };

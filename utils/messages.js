@@ -267,6 +267,26 @@ export const messages = {
   articleApprovedSuccess: {
     ar: "تم تأكيد نشر المقال بنجاح وأصبح متاحاً للعموم.",
     en: "Article approved and published successfully."
+  },
+  noBase64ImagesAllowed: {
+    ar: "لا يُسمح بتخزين الصور بصيغة Base64 داخل قاعدة البيانات. يرجى رفع الصورة إلى خدمة استضافة خارجية (مثل Cloudinary أو Cloudflare R2) ولصق رابط HTTPS.",
+    en: "Storing Base64 or binary image data in MongoDB is not allowed. Please host the image externally (e.g. Cloudinary or Cloudflare R2) and provide its HTTPS URL."
+  },
+  invalidImageUrl: {
+    ar: "رابط الصورة غير صالح. يجب استخدام رابط HTTPS آمن من مزوّد استضافة صور خارجي.",
+    en: "Invalid image URL. Please provide a valid external HTTPS image URL."
+  },
+  invalidYoutubeUrl: {
+    ar: "رابط فيديو يوتيوب غير صالح. يرجى إدخال رابط YouTube صحيح (watch أو youtu.be أو embed أو shorts).",
+    en: "Invalid YouTube URL. Please provide a supported YouTube URL (youtube.com/watch, youtu.be, embed, or shorts)."
+  },
+  invalidVideoUrl: {
+    ar: "رابط الفيديو غير صالح. يجب استخدام رابط HTTPS مدعوم من مزوّد استضافة فيديو خارجي.",
+    en: "Invalid video playback URL. Please provide a valid HTTPS URL from a supported external video host."
+  },
+  invalidVideoId: {
+    ar: "معرّف الفيديو (Video ID) غير صالح لمزوّد الاستضافة المختار.",
+    en: "Invalid video identifier for the selected video hosting provider."
   }
 };
 

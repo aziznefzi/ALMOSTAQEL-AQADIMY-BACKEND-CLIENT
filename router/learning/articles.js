@@ -97,8 +97,22 @@ const handleGetProtectedArticle = async (req, res) => {
 
     await Learning.updateOne({ _id: article._id }, { $inc: { views: 1 } });
 
+    const { imageDataUrl, ...safeArticle } = article;
+    const deliveryImage =
+      article.thumbnail?.url ||
+      (article.image && !String(article.image).startsWith("data:")
+        ? article.image
+        : imageDataUrl
+        ? `/api/learning/${article._id}/image`
+        : "");
+
     return res.status(200).json({
-      item: { ...article, id: article._id, source: article.source || "admin" },
+      item: {
+        ...safeArticle,
+        id: article._id,
+        image: deliveryImage,
+        source: article.source || "admin",
+      },
     });
   } catch (err) {
     console.error("Error in protected article route:", err);

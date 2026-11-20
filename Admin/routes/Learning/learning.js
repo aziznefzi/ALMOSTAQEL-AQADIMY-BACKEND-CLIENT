@@ -5,6 +5,12 @@ import { fileURLToPath } from "url";
 import multer from "multer";
 import { Learning } from "../../../schema/learning.js";
 import { AdminAuth } from "../../Auth/Madlware.js";
+import { getMsg } from "../../../utils/messages.js";
+import {
+  validateAndNormalizeImageMedia,
+  validateAndNormalizeVideoMedia,
+  validateYouTubeVideo,
+} from "../../../utils/mediaValidation.js";
 import coursesRouter from "./courses.js";
 import articlesRouter from "./articles.js";
 import learningVideoRouter from "./learningVideo.js";
@@ -112,9 +118,12 @@ const resolveTypeFilter = (rawType) => {
 };
 
 // ============================================================================
-// 0A. POST /admin/learning/upload-image - Upload Learning Cover Image
+// 0A. POST /admin/learning/upload-image - [DEPRECATED: Transition Only]
+// External image hosting (Cloudinary, Cloudflare R2, CDN URLs) is now the primary workflow.
+// Kept temporarily for backward compatibility during media migration.
 // ============================================================================
 router.post("/learning/upload-image", AdminAuth, (req, res) => {
+  res.setHeader("Deprecation", "true");
   uploadImage.single("image")(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
@@ -146,9 +155,11 @@ router.post("/learning/upload-image", AdminAuth, (req, res) => {
 });
 
 // ============================================================================
-// 0B. POST /admin/learning/upload-video - Upload Learning Video File
+// 0B. POST /admin/learning/upload-video - [DEPRECATED: Transition Only]
+// External video hosting (Cloudflare Stream, Bunny Stream, Vimeo, YouTube) is now the primary workflow.
 // ============================================================================
 router.post("/learning/upload-video", AdminAuth, (req, res) => {
+  res.setHeader("Deprecation", "true");
   uploadVideo.single("video")(req, res, (err) => {
     if (err) {
       if (err instanceof multer.MulterError) {
@@ -290,8 +301,10 @@ router.post("/learning", AdminAuth, async (req, res) => {
       priceAfter,
       status,
       image,
+      thumbnail,
       imageDataUrl,
       videoUrl,
+      videoMedia,
       courseVideos,
       stack,
       enrollments,
@@ -312,18 +325,58 @@ router.post("/learning", AdminAuth, async (req, res) => {
     if (normalizedType === "Videos") normalizedType = "video";
     if (normalizedType === "All Vidios") normalizedType = "ai-video";
 
-    const validVideos = Array.isArray(courseVideos)
-      ? courseVideos
-          .filter((v) => v && v.title && v.videoUrl)
-          .map((v, idx) => ({
-            title: String(v.title).trim(),
-            titleAr: String(v.titleAr || "").trim(),
-            description: String(v.description || "").trim(),
-            videoUrl: String(v.videoUrl).trim(),
-            duration: String(v.duration || "0:00").trim(),
-            order: idx + 1,
-          }))
-      : [];
+    const imageCheck = validateAndNormalizeImageMedia({
+      image,
+      thumbnail,
+      imageDataUrl,
+      allowExistingLegacyPath: false,
+    });
+    if (!imageCheck.valid) {
+      return res.status(400).json({
+        message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+        details: imageCheck.error,
+      });
+    }
+
+    let videoCheck = { valid: true, videoUrl: "", videoMedia: undefined };
+    if (normalizedType === "video" || normalizedType === "ai-video") {
+      videoCheck = validateAndNormalizeVideoMedia({
+        videoUrl,
+        videoMedia,
+        allowExistingLegacyPath: false,
+      });
+      if (!videoCheck.valid) {
+        return res.status(400).json({
+          message: getMsg(videoCheck.errorCode || "invalidVideoUrl", req),
+          details: videoCheck.error,
+        });
+      }
+    }
+
+    const validVideos = [];
+    if (Array.isArray(courseVideos)) {
+      for (const v of courseVideos) {
+        if (!v || !v.title || !v.videoUrl) continue;
+        const ytCheck = validateYouTubeVideo(v.videoUrl);
+        if (!ytCheck.valid) {
+          return res.status(400).json({
+            message: getMsg("invalidYoutubeUrl", req),
+            details: ytCheck.error,
+          });
+        }
+        validVideos.push({
+          title: String(v.title).trim(),
+          titleAr: String(v.titleAr || "").trim(),
+          description: String(v.description || "").trim(),
+          videoUrl: ytCheck.videoUrl,
+          provider: "youtube",
+          youtubeId: ytCheck.youtubeId,
+          embedUrl: ytCheck.embedUrl,
+          duration: String(v.duration || "0:00").trim(),
+          order: validVideos.length + 1,
+        });
+      }
+    }
 
     const newItem = await Learning.create({
       type: normalizedType,
@@ -344,7 +397,7 @@ router.post("/learning", AdminAuth, async (req, res) => {
       instructorAr: instructorAr?.trim() || "",
       author: author?.trim() || instructor?.trim() || "",
       tool: tool?.trim() || "",
-      platform: platform?.trim() || "Native",
+      platform: platform?.trim() || videoCheck.videoMedia?.provider || "external",
       duration: duration?.trim() || (hours ? `${hours}h` : "0h"),
       hours: Number(hours) || 0,
       lessons: validVideos.length || Number(lessons) || 0,
@@ -355,9 +408,11 @@ router.post("/learning", AdminAuth, async (req, res) => {
       enrollments: Number(enrollments) || 0,
       views: Number(views) || 0,
       rating: Number(rating) || 5.0,
-      image: image?.trim() || "",
-      imageDataUrl: imageDataUrl || "",
-      videoUrl: videoUrl?.trim() || "",
+      image: imageCheck.image,
+      thumbnail: imageCheck.thumbnail,
+      imageDataUrl: "",
+      videoUrl: videoCheck.videoUrl,
+      ...(videoCheck.videoMedia ? { videoMedia: videoCheck.videoMedia } : {}),
       courseVideos: validVideos,
       stack: Array.isArray(stack) ? stack : [],
     });
@@ -381,6 +436,52 @@ router.put("/learning/:id", AdminAuth, async (req, res) => {
     const item = await Learning.findById(id);
     if (!item) {
       return res.status(404).json({ message: "Learning item not found" });
+    }
+
+    if (
+      req.body.image !== undefined ||
+      req.body.thumbnail !== undefined ||
+      req.body.imageDataUrl !== undefined
+    ) {
+      const incomingImageDataUrl =
+        req.body.imageDataUrl && req.body.imageDataUrl !== item.imageDataUrl
+          ? req.body.imageDataUrl
+          : undefined;
+      const imageCheck = validateAndNormalizeImageMedia({
+        image: req.body.image !== undefined ? req.body.image : item.image,
+        thumbnail: req.body.thumbnail,
+        imageDataUrl: incomingImageDataUrl,
+        existingImage: item.image || "",
+        allowExistingLegacyPath: true,
+      });
+      if (!imageCheck.valid) {
+        return res.status(400).json({
+          message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+          details: imageCheck.error,
+        });
+      }
+      item.image = imageCheck.image;
+      item.thumbnail = imageCheck.thumbnail;
+      if (imageCheck.clearLegacyDataUrl) {
+        item.imageDataUrl = "";
+      }
+    }
+
+    if (req.body.videoUrl !== undefined || req.body.videoMedia !== undefined) {
+      const videoCheck = validateAndNormalizeVideoMedia({
+        videoUrl: req.body.videoUrl !== undefined ? req.body.videoUrl : item.videoUrl,
+        videoMedia: req.body.videoMedia,
+        existingVideoUrl: item.videoUrl || "",
+        allowExistingLegacyPath: true,
+      });
+      if (!videoCheck.valid) {
+        return res.status(400).json({
+          message: getMsg(videoCheck.errorCode || "invalidVideoUrl", req),
+          details: videoCheck.error,
+        });
+      }
+      item.videoUrl = videoCheck.videoUrl;
+      item.videoMedia = videoCheck.videoMedia;
     }
 
     const updatable = [
@@ -408,9 +509,6 @@ router.put("/learning/:id", AdminAuth, async (req, res) => {
       "priceAfter",
       "status",
       "availabilityStatus",
-      "image",
-      "imageDataUrl",
-      "videoUrl",
       "stack",
       "rating",
       "enrollments",

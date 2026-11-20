@@ -22,6 +22,23 @@ const courseVideoSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    provider: {
+      type: String,
+      enum: ["youtube", "legacy"],
+      default: "youtube",
+    },
+    youtubeId: {
+      type: String,
+      default: "",
+      trim: true,
+      maxLength: 32,
+    },
+    embedUrl: {
+      type: String,
+      default: "",
+      trim: true,
+      maxLength: 500,
+    },
     duration: {
       type: String,
       default: "0:00",
@@ -287,6 +304,35 @@ const learningSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    // Structured external image metadata (Cloudinary, Cloudflare R2, CDN)
+    // Used consistently for Article thumbnails, Course covers, and Video thumbnails
+    thumbnail: {
+      url: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 1000,
+      },
+      provider: {
+        type: String,
+        enum: ["cloudinary", "cloudflare_r2", "unsplash", "custom", "legacy", ""],
+        default: "",
+      },
+      publicId: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 300,
+      },
+      alt: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 200,
+      },
+    },
+    // @deprecated Legacy transition field — read-only backward compatibility for pre-migration items.
+    // New writes MUST NOT store Base64/binary image data in MongoDB.
     imageDataUrl: {
       type: String,
       default: "",
@@ -295,6 +341,51 @@ const learningSchema = new mongoose.Schema(
       type: String,
       default: "",
       trim: true,
+    },
+    // Structured external playback metadata for regular educational videos & AI videos
+    // (Cloudflare Stream, Bunny Stream, Vimeo, YouTube, Custom HLS/MP4)
+    videoMedia: {
+      provider: {
+        type: String,
+        enum: [
+          "cloudflare_stream",
+          "bunny_stream",
+          "vimeo",
+          "youtube",
+          "custom_hls",
+          "custom",
+          "legacy",
+          "",
+        ],
+        default: "",
+      },
+      videoId: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 200,
+      },
+      libraryId: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 100,
+      },
+      playbackUrl: {
+        type: String,
+        default: "",
+        trim: true,
+        maxLength: 1000,
+      },
+      isPrivate: {
+        type: Boolean,
+        default: false,
+      },
+      playbackStrategy: {
+        type: String,
+        enum: ["public", "signed_url", "provider_token"],
+        default: "public",
+      },
     },
     courseVideos: {
       type: [courseVideoSchema],

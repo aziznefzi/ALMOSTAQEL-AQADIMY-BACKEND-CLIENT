@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Learning } from "../../../schema/learning.js";
 import { AdminAuth } from "../../Auth/Madlware.js";
 import { getMsg } from "../../../utils/messages.js";
+import { validateAndNormalizeImageMedia } from "../../../utils/mediaValidation.js";
 
 const router = express.Router();
 
@@ -139,6 +140,7 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       priceAfter,
       status,
       image,
+      thumbnail,
       imageDataUrl,
       stack,
       rating,
@@ -147,6 +149,19 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
 
     if (!title || !title.trim()) {
       return res.status(400).json({ message: "Article title is required" });
+    }
+
+    const imageCheck = validateAndNormalizeImageMedia({
+      image,
+      thumbnail,
+      imageDataUrl,
+      allowExistingLegacyPath: false,
+    });
+    if (!imageCheck.valid) {
+      return res.status(400).json({
+        message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+        details: imageCheck.error,
+      });
     }
 
     const normalizedTags = Array.isArray(tags)
@@ -176,8 +191,9 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
       status: ALLOWED_ARTICLE_STATUSES.includes(status) ? status : "published",
       rating: Number(rating) || 5.0,
-      image: image?.trim() || "",
-      imageDataUrl: imageDataUrl || "",
+      image: imageCheck.image,
+      thumbnail: imageCheck.thumbnail,
+      imageDataUrl: "",
       stack: Array.isArray(stack) ? stack : [],
       ...(seo && typeof seo === "object" && !Array.isArray(seo) ? { seo } : {}),
     });
@@ -202,6 +218,35 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
       return res.status(404).json({ message: "Article not found" });
     }
 
+    if (
+      req.body.image !== undefined ||
+      req.body.thumbnail !== undefined ||
+      req.body.imageDataUrl !== undefined
+    ) {
+      const incomingImageDataUrl =
+        req.body.imageDataUrl && req.body.imageDataUrl !== article.imageDataUrl
+          ? req.body.imageDataUrl
+          : undefined;
+      const imageCheck = validateAndNormalizeImageMedia({
+        image: req.body.image !== undefined ? req.body.image : article.image,
+        thumbnail: req.body.thumbnail,
+        imageDataUrl: incomingImageDataUrl,
+        existingImage: article.image || "",
+        allowExistingLegacyPath: true,
+      });
+      if (!imageCheck.valid) {
+        return res.status(400).json({
+          message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+          details: imageCheck.error,
+        });
+      }
+      article.image = imageCheck.image;
+      article.thumbnail = imageCheck.thumbnail;
+      if (imageCheck.clearLegacyDataUrl) {
+        article.imageDataUrl = "";
+      }
+    }
+
     const updatable = [
       "title",
       "titleAr",
@@ -221,8 +266,6 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
       "price",
       "priceAfter",
       "status",
-      "image",
-      "imageDataUrl",
       "stack",
       "rating",
       "seo",

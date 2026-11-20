@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import { Learning } from "../../schema/learning.js";
 import { verifyAgentApiKey } from "../../middleware/verifyAgentApiKey.js";
 import { getMsg } from "../../utils/messages.js";
+import { detectImageProvider, extractCloudinaryPublicId } from "../../utils/mediaValidation.js";
 
 const router = express.Router();
 
@@ -282,10 +283,13 @@ const validateAndSanitizeAgentPayload = (body) => {
     }
   }
 
-  // 11. image (optional safe URL)
-  const imageCheck = sanitizeSafeUrl(body.image, { allowRelativeUploads: true });
+  // 11. image (optional safe HTTPS URL, up to 1000 chars for external CDNs)
+  const imageCheck = sanitizeSafeUrl(body.image, {
+    allowRelativeUploads: false,
+    maxLength: 1000,
+  });
   if (!imageCheck.valid) {
-    errors.push("image must be a valid http(s) URL or /uploads/ path.");
+    errors.push("image must be a valid external http(s) URL.");
   }
 
   // 12. seo (optional metadata object)
@@ -385,16 +389,33 @@ const toPublicArticleCard = (item) => {
   const {
     courseVideos,
     videoUrl,
+    videoMedia,
     content,
     contentAr,
     preorders,
     approvedBy,
+    imageDataUrl,
     ...publicFields
   } = item;
+
+  const deliveryImage =
+    item.thumbnail?.url ||
+    (item.image && !String(item.image).startsWith("data:")
+      ? item.image
+      : imageDataUrl
+      ? `/api/learning/${item._id}/image`
+      : "");
 
   return {
     ...publicFields,
     id: item._id,
+    image: deliveryImage,
+    thumbnail: {
+      url: deliveryImage,
+      provider: item.thumbnail?.provider || "",
+      publicId: item.thumbnail?.publicId || "",
+      alt: item.thumbnail?.alt || item.title || "",
+    },
     source: item.source || "admin",
     excerpt: item.excerpt || item.description || "",
     excerptAr: item.excerptAr || item.descriptionAr || "",
@@ -478,6 +499,13 @@ router.post(
         instructor: data.instructor,
         readTime: data.readTime,
         image: data.image,
+        thumbnail: {
+          url: data.image,
+          provider: data.image ? detectImageProvider(data.image) : "",
+          publicId: data.image ? extractCloudinaryPublicId(data.image) : "",
+          alt: data.title,
+        },
+        imageDataUrl: "",
         seo: data.seo,
         source: "ai_agent",
         status: "pending",

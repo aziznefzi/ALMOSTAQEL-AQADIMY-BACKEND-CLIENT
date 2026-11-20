@@ -1,6 +1,11 @@
 import express from "express";
 import { Learning } from "../../../schema/learning.js";
 import { AdminAuth } from "../../Auth/Madlware.js";
+import { getMsg } from "../../../utils/messages.js";
+import {
+  validateAndNormalizeImageMedia,
+  validateYouTubeVideo,
+} from "../../../utils/mediaValidation.js";
 
 const router = express.Router();
 
@@ -135,6 +140,7 @@ router.post("/learning/courses", AdminAuth, async (req, res) => {
       priceAfter,
       status,
       image,
+      thumbnail,
       imageDataUrl,
       stack,
       rating,
@@ -145,21 +151,48 @@ router.post("/learning/courses", AdminAuth, async (req, res) => {
       return res.status(400).json({ message: "Course title is required" });
     }
 
-    const validVideos = Array.isArray(courseVideos)
-      ? courseVideos
-          .filter((v) => v && v.title && v.videoUrl)
-          .map((v, idx) => ({
-            title: String(v.title).trim(),
-            titleAr: String(v.titleAr || "").trim(),
-            description: String(v.description || "").trim(),
-            videoUrl: String(v.videoUrl).trim(),
-            duration: String(v.duration || "0:00").trim(),
-            order: idx + 1,
-          }))
-      : [];
+    const imageCheck = validateAndNormalizeImageMedia({
+      image,
+      thumbnail,
+      imageDataUrl,
+      allowExistingLegacyPath: false,
+    });
+    if (!imageCheck.valid) {
+      return res.status(400).json({
+        message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+        details: imageCheck.error,
+      });
+    }
+
+    const validVideos = [];
+    if (Array.isArray(courseVideos)) {
+      for (let idx = 0; idx < courseVideos.length; idx++) {
+        const v = courseVideos[idx];
+        if (!v || !v.title || !v.videoUrl) continue;
+        const ytCheck = validateYouTubeVideo(v.videoUrl);
+        if (!ytCheck.valid) {
+          return res.status(400).json({
+            message: getMsg("invalidYoutubeUrl", req),
+            details: ytCheck.error,
+          });
+        }
+        validVideos.push({
+          title: String(v.title).trim(),
+          titleAr: String(v.titleAr || "").trim(),
+          description: String(v.description || "").trim(),
+          videoUrl: ytCheck.videoUrl,
+          provider: "youtube",
+          youtubeId: ytCheck.youtubeId,
+          embedUrl: ytCheck.embedUrl,
+          duration: String(v.duration || "0:00").trim(),
+          order: validVideos.length + 1,
+        });
+      }
+    }
 
     const newCourse = await Learning.create({
       type: "course",
+      source: "admin",
       title: title.trim(),
       titleAr: titleAr?.trim() || "",
       description: description?.trim() || "",
@@ -179,8 +212,9 @@ router.post("/learning/courses", AdminAuth, async (req, res) => {
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
       status: ["published", "draft", "archived"].includes(status) ? status : "published",
       rating: Number(rating) || 5.0,
-      image: image?.trim() || "",
-      imageDataUrl: imageDataUrl || "",
+      image: imageCheck.image,
+      thumbnail: imageCheck.thumbnail,
+      imageDataUrl: "",
       courseVideos: validVideos,
       stack: Array.isArray(stack) ? stack : [],
     });
@@ -205,6 +239,35 @@ router.put("/learning/courses/:id", AdminAuth, async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
+    if (
+      req.body.image !== undefined ||
+      req.body.thumbnail !== undefined ||
+      req.body.imageDataUrl !== undefined
+    ) {
+      const incomingImageDataUrl =
+        req.body.imageDataUrl && req.body.imageDataUrl !== course.imageDataUrl
+          ? req.body.imageDataUrl
+          : undefined;
+      const imageCheck = validateAndNormalizeImageMedia({
+        image: req.body.image !== undefined ? req.body.image : course.image,
+        thumbnail: req.body.thumbnail,
+        imageDataUrl: incomingImageDataUrl,
+        existingImage: course.image || "",
+        allowExistingLegacyPath: true,
+      });
+      if (!imageCheck.valid) {
+        return res.status(400).json({
+          message: getMsg(imageCheck.errorCode || "invalidImageUrl", req),
+          details: imageCheck.error,
+        });
+      }
+      course.image = imageCheck.image;
+      course.thumbnail = imageCheck.thumbnail;
+      if (imageCheck.clearLegacyDataUrl) {
+        course.imageDataUrl = "";
+      }
+    }
+
     const updatable = [
       "title",
       "titleAr",
@@ -222,8 +285,6 @@ router.put("/learning/courses/:id", AdminAuth, async (req, res) => {
       "price",
       "priceAfter",
       "status",
-      "image",
-      "imageDataUrl",
       "stack",
       "rating",
     ];
@@ -289,15 +350,22 @@ router.post("/learning/courses/:id/videos", AdminAuth, async (req, res) => {
     if (!title || !String(title).trim()) {
       return res.status(400).json({ message: "Video title is required" });
     }
-    if (!videoUrl || !String(videoUrl).trim()) {
-      return res.status(400).json({ message: "Video URL or file is required" });
+    const ytCheck = validateYouTubeVideo(videoUrl);
+    if (!ytCheck.valid) {
+      return res.status(400).json({
+        message: getMsg("invalidYoutubeUrl", req),
+        details: ytCheck.error,
+      });
     }
 
     course.courseVideos.push({
       title: String(title).trim(),
       titleAr: String(titleAr || "").trim(),
       description: String(description || "").trim(),
-      videoUrl: String(videoUrl).trim(),
+      videoUrl: ytCheck.videoUrl,
+      provider: "youtube",
+      youtubeId: ytCheck.youtubeId,
+      embedUrl: ytCheck.embedUrl,
       duration: String(duration || "0:00").trim(),
       order: course.courseVideos.length + 1,
     });
@@ -343,10 +411,17 @@ router.put("/learning/courses/:id/videos/:videoId", AdminAuth, async (req, res) 
     if (titleAr !== undefined) video.titleAr = String(titleAr).trim();
     if (description !== undefined) video.description = String(description).trim();
     if (videoUrl !== undefined) {
-      if (!String(videoUrl).trim()) {
-        return res.status(400).json({ message: "Video URL or file cannot be empty" });
+      const ytCheck = validateYouTubeVideo(videoUrl);
+      if (!ytCheck.valid) {
+        return res.status(400).json({
+          message: getMsg("invalidYoutubeUrl", req),
+          details: ytCheck.error,
+        });
       }
-      video.videoUrl = String(videoUrl).trim();
+      video.videoUrl = ytCheck.videoUrl;
+      video.provider = "youtube";
+      video.youtubeId = ytCheck.youtubeId;
+      video.embedUrl = ytCheck.embedUrl;
     }
     if (duration !== undefined) video.duration = String(duration || "0:00").trim();
 

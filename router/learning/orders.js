@@ -451,7 +451,20 @@ router.post("/learning/orders/create", userAuth, async (req, res) => {
 // Fetch logged-in student's orders, unlocked products, and cart products from DB
 // ============================================================================
 const PRODUCT_CARD_FIELDS =
-  "title titleAr description descriptionAr type category tag level levelAr price priceAfter hours duration lessons readTime image imageDataUrl availabilityStatus";
+  "title titleAr description descriptionAr type category tag level levelAr price priceAfter hours duration lessons readTime image thumbnail availabilityStatus";
+
+const normalizeProductCardImage = (p) => {
+  const thumbUrl = p?.thumbnail?.url || "";
+  const rawImg = String(thumbUrl || p?.image || "").trim();
+  const safeImage =
+    rawImg && !rawImg.startsWith("data:")
+      ? rawImg
+      : `/api/learning/${p._id}/image`;
+  return {
+    ...p,
+    image: safeImage,
+  };
+};
 
 const handleGetMyOrders = async (req, res) => {
   try {
@@ -560,7 +573,7 @@ const handleGetMyOrders = async (req, res) => {
           ? Number(p.priceAfter)
           : itemPrice;
       return {
-        ...p,
+        ...normalizeProductCardImage(p),
         id: String(p._id),
         courseId: String(p._id),
         price: itemPriceAfter,
@@ -579,7 +592,10 @@ const handleGetMyOrders = async (req, res) => {
       purchasedProductIds: unifiedPurchasedIds,
       preorderedProductIds,
       pendingOrdersMap,
-      unlockedProducts: unlockedProducts.map((p) => ({ ...p, id: p._id })),
+      unlockedProducts: unlockedProducts.map((p) => ({
+        ...normalizeProductCardImage(p),
+        id: p._id,
+      })),
       cartProductIds: formattedCartProducts.map((p) => String(p._id)),
       cartProducts: formattedCartProducts,
     });
