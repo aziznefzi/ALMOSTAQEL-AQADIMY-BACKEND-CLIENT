@@ -287,6 +287,138 @@ export const messages = {
   invalidVideoId: {
     ar: "معرّف الفيديو (Video ID) غير صالح لمزوّد الاستضافة المختار.",
     en: "Invalid video identifier for the selected video hosting provider."
+  },
+  settingsProfileUpdated: {
+    ar: "تم تحديث بيانات حسابك بنجاح.",
+    en: "Your account information has been updated successfully."
+  },
+  settingsNoChanges: {
+    ar: "لم يتم إجراء أي تغييرات على بياناتك الحالية.",
+    en: "No changes were detected in your profile information."
+  },
+  settingsInvalidFirstName: {
+    ar: "يجب أن يتكون الاسم الأول من حرفين إلى 50 حرفاً دون رموز غير مسموح بها.",
+    en: "First name must be between 2 and 50 valid characters."
+  },
+  settingsInvalidLastName: {
+    ar: "يجب أن يتكون اللقب من حرفين إلى 50 حرفاً دون رموز غير مسموح بها.",
+    en: "Last name must be between 2 and 50 valid characters."
+  },
+  settingsInvalidEmail: {
+    ar: "صيغة البريد الإلكتروني غير صالحة. يرجى إدخال بريد إلكتروني صحيح.",
+    en: "Invalid email address format. Please enter a valid email."
+  },
+  settingsInvalidPhone: {
+    ar: "رقم الهاتف غير صالح. يرجى إدخال رقم صحيح مكوّن من 8 إلى 15 رقماً.",
+    en: "Invalid phone number. Please enter a valid phone number (8 to 15 digits)."
+  },
+  settingsEmailSameAsCurrent: {
+    ar: "البريد الإلكتروني الجديد مطابق لبريدك الإلكتروني الحالي.",
+    en: "The new email address is identical to your current email."
+  },
+  settingsEmailCodeSent: {
+    ar: "تم إرسال رمز التحقق المكوّن من 6 أرقام إلى البريد الإلكتروني الجديد.",
+    en: "A 6-digit verification code has been sent to your new email address."
+  },
+  settingsEmailChangedSuccess: {
+    ar: "تم التحقق وتحديث البريد الإلكتروني بنجاح.",
+    en: "Your email address has been verified and updated successfully."
+  },
+  settingsEmailChangeExpired: {
+    ar: "انتهت صلاحية رمز التحقق لتغيير البريد الإلكتروني. يرجى طلب رمز جديد.",
+    en: "The email change verification code has expired. Please request a new code."
+  },
+  settingsEmailChangeDeviceMismatch: {
+    ar: "تنبيه أمني: يجب إتمام تأكيد البريد الإلكتروني من نفس الجهاز الذي أرسل الطلب.",
+    en: "Security alert: Email verification must be completed from the same device that requested it."
+  },
+  settingsAvatarRequired: {
+    ar: "يرجى اختيار صورة لرفعها كصورة شخصية.",
+    en: "Please select an image file to upload as your profile picture."
+  },
+  settingsAvatarInvalidType: {
+    ar: "نوع الملف غير مدعوم أو غير آمن. يُسمح فقط بصور PNG و JPG و WEBP و GIF.",
+    en: "Unsupported or unsafe file type. Only valid PNG, JPG, WEBP, and GIF images are allowed."
+  },
+  settingsAvatarTooLarge: {
+    ar: "حجم الصورة كبير جداً. الحد الأقصى المسموح به هو 3 ميجابايت.",
+    en: "Image file is too large. Maximum allowed size is 3MB."
+  },
+  settingsAvatarUpdated: {
+    ar: "تم تحديث صورة حسابك الشخصي بنجاح.",
+    en: "Your profile picture has been updated successfully."
+  },
+  settingsAvatarRemoved: {
+    ar: "تم حذف صورة الحساب الشخصي بنجاح.",
+    en: "Your profile picture has been removed."
+  },
+  settingsCurrentPasswordRequired: {
+    ar: "يرجى إدخال كلمة المرور الحالية للمتابعة.",
+    en: "Please enter your current password to continue."
+  },
+  settingsCurrentPasswordIncorrect: {
+    ar: "كلمة المرور الحالية غير صحيحة.",
+    en: "The current password you entered is incorrect."
+  },
+  settingsPasswordLockout: {
+    ar: "تم قفل محاولات كلمة المرور مؤقتاً لمدة 10 دقائق لحماية حسابك بسبب تكرار المحاولات الخاطئة.",
+    en: "Password attempts are temporarily locked for 10 minutes to protect your account after too many failed attempts."
+  },
+  settingsNewPasswordSameAsOld: {
+    ar: "يجب أن تكون كلمة المرور الجديدة مختلفة عن كلمة المرور الحالية.",
+    en: "Your new password must be different from your current password."
+  },
+  settingsPasswordsMismatch: {
+    ar: "كلمة المرور الجديدة وتأكيدها غير متطابقتين.",
+    en: "The new password and confirmation password do not match."
+  },
+  settingsPasswordTooLong: {
+    ar: "كلمة المرور طويلة جداً. يرجى اختيار كلمة مرور لا تتجاوز 72 حرفاً.",
+    en: "Password is too long. Please use at most 72 characters."
+  },
+  settingsPasswordChangedSuccess: {
+    ar: "تم تغيير كلمة المرور بنجاح وتأمين جلسات حسابك.",
+    en: "Your password has been changed successfully and your sessions have been secured."
+  },
+  settingsNoLocalPassword: {
+    ar: "تم إنشاء هذا الحساب عبر Google ولا يحتوي على كلمة مرور محلية بعد. يمكنك استخدام خيار «هل نسيت كلمة المرور؟» لإرسال رمز إلى بريدك وتعيين كلمة مرور جديدة.",
+    en: "This account was created with Google and does not have a local password yet. Click 'Forgot password?' to verify via email code and set a new password."
+  },
+  settingsResetCodeSent: {
+    ar: "تم إرسال رمز التحقق المكوّن من 6 أرقام إلى بريدك الإلكتروني بنجاح.",
+    en: "A 6-digit verification code has been sent to your email address."
+  },
+  settingsResetCodeCooldown: {
+    ar: "يرجى الانتظار قليلاً قبل طلب رمز تحقق جديد.",
+    en: "Please wait a moment before requesting another verification code."
+  },
+  settingsResetCodeRateLimit: {
+    ar: "لقد تجاوزت الحد المسموح به لطلبات رموز التحقق. يرجى الانتظار 10 دقائق ثم المحاولة مجدداً.",
+    en: "You have exceeded the verification code request limit. Please wait 10 minutes before trying again."
+  },
+  settingsResetCodeExpired: {
+    ar: "انتهت صلاحية رمز التحقق. يرجى طلب رمز جديد.",
+    en: "The verification code has expired. Please request a new code."
+  },
+  settingsResetCodeMaxAttempts: {
+    ar: "تم استنفاد عدد المحاولات المسموح بها لهذا الرمز. يرجى طلب رمز تحقق جديد.",
+    en: "Maximum attempts exceeded for this code. Please request a new verification code."
+  },
+  settingsResetCodeVerified: {
+    ar: "تم التحقق من الرمز بنجاح! يمكنك الآن تعيين كلمة المرور الجديدة.",
+    en: "Code verified successfully! You can now set your new password."
+  },
+  settingsResetTokenInvalid: {
+    ar: "انتهت صلاحية جلسة تغيير كلمة المرور أو أنها غير صالحة. يرجى طلب رمز جديد.",
+    en: "Your password reset session is invalid or has expired. Please request a new code."
+  },
+  settingsPasswordResetSuccess: {
+    ar: "تم تغيير كلمة المرور بنجاح دون الحاجة لكلمة المرور القديمة وتأمين حسابك.",
+    en: "Your password has been updated successfully and your account sessions have been secured."
+  },
+  settingsEmailSendFailed: {
+    ar: "تعذر إرسال البريد الإلكتروني حالياً بسبب مشكلة مؤقتة في الخادم أو الاتصال. يرجى المحاولة مرة أخرى.",
+    en: "Could not send the email right now due to a temporary server or connection issue. Please try again."
   }
 };
 

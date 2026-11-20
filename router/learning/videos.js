@@ -4,6 +4,7 @@ import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
 import { resolveVideoPlaybackForUser } from "../../utils/mediaValidation.js";
+import { recordUserLearningView } from "../../utils/trackUserLearningView.js";
 
 const router = express.Router();
 
@@ -88,6 +89,7 @@ const handleGetProtectedVideo = async (req, res) => {
     }
 
     await Learning.updateOne({ _id: video._id }, { $inc: { views: 1 } });
+    await recordUserLearningView(req.user.userId, video._id, "video");
 
     const { imageDataUrl, ...safeVideo } = video;
     const resolvedPlayback = resolveVideoPlaybackForUser(video);

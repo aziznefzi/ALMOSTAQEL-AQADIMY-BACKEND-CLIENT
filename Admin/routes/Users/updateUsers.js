@@ -95,6 +95,9 @@ router.put("/update-user/:id", AdminAuth, async (req, res) => {
         delete updatedData.googleId;
         delete updatedData.ipAddress;
         delete updatedData.forgotPasswordRequests;
+        delete updatedData.avatarDataUrl;
+        delete updatedData.settingsSecurity;
+        delete updatedData.learningActivity;
 
         res.status(200).json({
             message: "User updated successfully",

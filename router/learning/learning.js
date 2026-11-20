@@ -8,6 +8,7 @@ import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
 import { resolveVideoPlaybackForUser } from "../../utils/mediaValidation.js";
+import { recordUserLearningView } from "../../utils/trackUserLearningView.js";
 import coursesRouter from "./courses.js";
 import articlesRouter from "./articles.js";
 import videosRouter from "./videos.js";
@@ -408,6 +409,7 @@ const handleGetProtectedItem = async (req, res) => {
     }
 
     await Learning.updateOne({ _id: item._id }, { $inc: { views: 1 } });
+    await recordUserLearningView(req.user.userId, item._id, item.type);
 
     const courseVideos = Array.isArray(item.courseVideos)
       ? item.courseVideos.map((v, idx) => ({

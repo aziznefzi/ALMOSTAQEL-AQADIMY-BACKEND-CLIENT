@@ -3,6 +3,7 @@ import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
+import { recordUserLearningView } from "../../utils/trackUserLearningView.js";
 
 const router = express.Router();
 
@@ -116,6 +117,7 @@ const handleGetProtectedCourse = async (req, res) => {
     }
 
     await Learning.updateOne({ _id: course._id }, { $inc: { views: 1 } });
+    await recordUserLearningView(req.user.userId, course._id, "course");
 
     return res.status(200).json({
       item: formatCourseForStudent(course),

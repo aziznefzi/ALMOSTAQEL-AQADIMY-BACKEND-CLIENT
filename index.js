@@ -30,6 +30,7 @@ import serviceRequestsAdminRouter from "./Admin/routes/services/getServices.js"
 import learningClientRouter, { serveLearningUploadFallback } from "./router/learning/learning.js"
 import articlesAgentRouter from "./router/learning/articlesAgent.js"
 import aiChatRouter from "./router/aiChat/aiChat.js"
+import settingsRouter, { serveAvatarUploadFallback } from "./router/settings/settings.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -43,8 +44,14 @@ app.get("/health", (req, res) => {
 app.use(cookieParser())
 app.use(express.json({ limit: "15mb" }))
 app.use(express.urlencoded({ limit: "15mb", extended: true }))
+app.use("/uploads/avatars", (req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+})
 app.use("/uploads", express.static(path.join(__dirname, "uploads")))
 app.get("/uploads/learning/:filename", serveLearningUploadFallback({ requirePublished: true }))
+app.get("/uploads/avatars/:filename", serveAvatarUploadFallback)
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({ message: getMsg("invalidJson", req) });
@@ -80,13 +87,13 @@ app.use(cors({
 }));
 
 
-if (mongoose.connection.readyState === 1) {
-  CreateAdminAccunt();
-} else {
-  mongoose.connection.once("connected", () => {
-    CreateAdminAccunt();
-  });
-}
+// if (mongoose.connection.readyState === 1) {
+//   CreateAdminAccunt();
+// } else {
+//   mongoose.connection.once("connected", () => {
+//     CreateAdminAccunt();
+//   });
+// }
 
 connectDB()
 
@@ -102,36 +109,38 @@ app.use("/api", supportRouter)
 app.use("/api", articlesAgentRouter)
 app.use("/api", learningClientRouter)
 app.use("/api", aiChatRouter)
+app.use("/api", settingsRouter)
 
 app.listen(port, () => {
   console.log(`server running is ${port}`)
 })
 
-// admin router: separate app, reachable only from localhost on a different port
-const adminPort = process.env.ADMIN_PORT || 4000
-const adminApp = express()
-adminApp.use(cookieParser())
-adminApp.use(express.json({ limit: "25mb" }))
-adminApp.use(express.urlencoded({ limit: "25mb", extended: true }))
-adminApp.use("/uploads", express.static(path.join(__dirname, "uploads")))
-adminApp.get("/uploads/learning/:filename", serveLearningUploadFallback({ requirePublished: false }))
-adminApp.use(cors({
-  origin: ["http://localhost:5173", "http://localhost:5174"],
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
-}))
-adminApp.use("/admin/auth", AdminLogin)
-adminApp.use("/admin/", getUsers)
-adminApp.use("/admin/", DeleteUser)
-adminApp.use("/admin/", UserBaned)
-adminApp.use("/admin/", updateUsers)
-adminApp.use("/admin/", getSupport)
-adminApp.use("/admin/", learningAdminRouter)
-adminApp.use("/admin/", serviceRequestsAdminRouter)
-adminApp.use("/api", articlesAdminApprovalRouter)
+// // admin router: separate app, reachable only from localhost on a different port
+// const adminPort = process.env.ADMIN_PORT || 4000
+// const adminApp = express()
+// adminApp.use(cookieParser())
+// adminApp.use(express.json({ limit: "25mb" }))
+// adminApp.use(express.urlencoded({ limit: "25mb", extended: true }))
+// adminApp.use("/uploads", express.static(path.join(__dirname, "uploads")))
+// adminApp.get("/uploads/learning/:filename", serveLearningUploadFallback({ requirePublished: false }))
+// adminApp.get("/uploads/avatars/:filename", serveAvatarUploadFallback)
+// adminApp.use(cors({
+//   origin: ["http://localhost:5173", "http://localhost:5174"],
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-device-id", "x-lang", "Accept-Language"]
+// }))
+// adminApp.use("/admin/auth", AdminLogin)
+// adminApp.use("/admin/", getUsers)
+// adminApp.use("/admin/", DeleteUser)
+// adminApp.use("/admin/", UserBaned)
+// adminApp.use("/admin/", updateUsers)
+// adminApp.use("/admin/", getSupport)
+// adminApp.use("/admin/", learningAdminRouter)
+// adminApp.use("/admin/", serviceRequestsAdminRouter)
+// adminApp.use("/api", articlesAdminApprovalRouter)
 
-// Bind to loopback only so the admin API is never exposed externally
-adminApp.listen(adminPort, "127.0.0.1", () => {
-  console.log(`admin server running on http://localhost:${adminPort}`)
-})
+// // Bind to loopback only so the admin API is never exposed externally
+// adminApp.listen(adminPort, "127.0.0.1", () => {
+//   console.log(`admin server running on http://localhost:${adminPort}`)
+// })

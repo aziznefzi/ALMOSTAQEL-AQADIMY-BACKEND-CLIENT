@@ -4,6 +4,7 @@ import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
 import { userAuth } from "../../middleware/userAuth.js";
 import { getMsg } from "../../utils/messages.js";
+import { recordUserLearningView } from "../../utils/trackUserLearningView.js";
 
 const router = express.Router();
 
@@ -110,6 +111,7 @@ const handleGetProtectedArticle = async (req, res) => {
     }
 
     await Learning.updateOne({ _id: article._id }, { $inc: { views: 1 } });
+    await recordUserLearningView(req.user.userId, article._id, "article");
 
     const { imageDataUrl, source, ...safeArticle } = article;
     const deliveryImage =

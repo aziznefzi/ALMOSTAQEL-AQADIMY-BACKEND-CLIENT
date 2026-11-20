@@ -41,6 +41,10 @@ const usersSchema = mongoose.Schema({
     type: String,
     default: ""
   },
+  avatarDataUrl: {
+    type: String,
+    default: ""
+  },
   authProvider: {
     type: String,
     enum: ['local', 'google'],
@@ -124,6 +128,66 @@ const usersSchema = mongoose.Schema({
   purchasedProducts: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
     default: []
+  },
+  learningActivity: {
+    viewedArticles: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
+      default: []
+    },
+    viewedVideos: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
+      default: []
+    },
+    viewedCourses: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Learning" }],
+      default: []
+    },
+    recentHistory: {
+      type: [
+        {
+          itemId: { type: mongoose.Schema.Types.ObjectId, ref: "Learning", required: true },
+          category: { type: String, enum: ["article", "video", "course"], required: true },
+          lastViewedAt: { type: Date, default: Date.now },
+          viewsCount: { type: Number, default: 1 }
+        }
+      ],
+      default: []
+    }
+  },
+  settingsSecurity: {
+    passwordFailedAttempts: {
+      type: Number,
+      default: 0
+    },
+    passwordLockUntil: {
+      type: Date,
+      default: null
+    },
+    passwordChangedAt: {
+      type: Date,
+      default: null
+    },
+    passwordReset: {
+      codeHash: { type: String, default: null },
+      expiresAt: { type: Date, default: null },
+      attempts: { type: Number, default: 0 },
+      deviceId: { type: String, default: null },
+      lastSentAt: { type: Date, default: null },
+      requestTimestamps: { type: [Date], default: [] },
+      lockUntil: { type: Date, default: null },
+      resetTokenHash: { type: String, default: null },
+      resetTokenExpiresAt: { type: Date, default: null }
+    },
+    emailChange: {
+      pendingEmail: { type: String, default: null },
+      codeHash: { type: String, default: null },
+      expiresAt: { type: Date, default: null },
+      attempts: { type: Number, default: 0 },
+      deviceId: { type: String, default: null },
+      lastSentAt: { type: Date, default: null },
+      requestTimestamps: { type: [Date], default: [] },
+      lockUntil: { type: Date, default: null }
+    }
   }
 }, { timestamps: true })
 
