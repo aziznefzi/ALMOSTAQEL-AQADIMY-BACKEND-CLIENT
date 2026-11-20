@@ -1,4 +1,7 @@
 import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import { Learning } from "../../schema/learning.js";
 import { Orders } from "../../schema/orders.js";
@@ -9,7 +12,71 @@ import articlesRouter from "./articles.js";
 import videosRouter from "./videos.js";
 import ordersRouter from "./orders.js";
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const learningUploadsDir = path.resolve(__dirname, "../../uploads/learning");
+
 const router = express.Router();
+
+// Helper: decode base64 data URL from MongoDB and send as cacheable binary image
+export const sendBase64Image = (res, dataUrl, maxAgeSeconds = 86400) => {
+  if (typeof dataUrl !== "string" || !dataUrl.startsWith("data:image/")) {
+    return false;
+  }
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/);
+  if (!match) return false;
+  const mimeType = match[1];
+  const base64Body = match[2];
+  try {
+    const buffer = Buffer.from(base64Body, "base64");
+    if (!buffer || buffer.length === 0) return false;
+    res.setHeader("Content-Type", mimeType);
+    res.setHeader("Content-Length", buffer.length);
+    res.setHeader(
+      "Cache-Control",
+      `public, max-age=${maxAgeSeconds}${maxAgeSeconds >= 86400 ? ", immutable" : ""}`
+    );
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+    res.status(200).send(buffer);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// Fallback handler for GET /uploads/learning/:filename when file is not on local/ephemeral disk
+// Serves the image directly from MongoDB `imageDataUrl` so production deployments never 404.
+export const serveLearningUploadFallback =
+  ({ requirePublished = true } = {}) =>
+  async (req, res) => {
+    try {
+      const rawFilename = String(req.params.filename || "").trim();
+      if (!rawFilename || !/^[a-zA-Z0-9._-]+$/.test(rawFilename)) {
+        return res.status(404).end();
+      }
+
+      const imagePath = `/uploads/learning/${rawFilename}`;
+      const query = {
+        $or: [{ image: imagePath }, { image: rawFilename }],
+      };
+      if (requirePublished) {
+        query.status = "published";
+      }
+
+      const item = await Learning.findOne(query)
+        .select("imageDataUrl")
+        .lean();
+
+      if (item?.imageDataUrl && sendBase64Image(res, item.imageDataUrl, 31536000)) {
+        return;
+      }
+
+      return res.status(404).end();
+    } catch (err) {
+      console.error("Error in serveLearningUploadFallback:", err);
+      return res.status(500).end();
+    }
+  };
 
 // Mount modular protected routes for orders, courses, articles, and videos
 router.use("/", ordersRouter);
@@ -161,6 +228,56 @@ router.get("/learning", async (req, res) => {
   } catch (err) {
     console.error("Error in GET /api/learning:", err);
     res.status(500).json({ message: "Failed to fetch learning items" });
+  }
+});
+
+// ============================================================================
+// 1B. GET /api/learning/:id/image - Public Cacheable Binary Cover Image
+// Serves published learning item cover directly from MongoDB or disk (never 404s on ephemeral hosts)
+// ============================================================================
+router.get("/learning/:id/image", async (req, res) => {
+  try {
+    const rawId = String(req.params.id || "").trim();
+    if (!mongoose.isValidObjectId(rawId)) {
+      return res.status(404).end();
+    }
+
+    const item = await Learning.findOne({ _id: rawId, status: "published" })
+      .select("image imageDataUrl")
+      .lean();
+
+    if (!item) {
+      return res.status(404).end();
+    }
+
+    if (item.imageDataUrl && sendBase64Image(res, item.imageDataUrl, 86400)) {
+      return;
+    }
+
+    const rawImg = String(item.image || "").trim();
+    if (rawImg.startsWith("/uploads/learning/")) {
+      const filename = path.basename(rawImg);
+      if (/^[a-zA-Z0-9._-]+$/.test(filename)) {
+        const diskPath = path.join(learningUploadsDir, filename);
+        if (fs.existsSync(diskPath)) {
+          res.setHeader("Cache-Control", "public, max-age=86400");
+          res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+          return res.sendFile(diskPath);
+        }
+      }
+    }
+
+    if (
+      (rawImg.startsWith("http://") || rawImg.startsWith("https://")) &&
+      !rawImg.includes("localhost:")
+    ) {
+      return res.redirect(302, rawImg);
+    }
+
+    return res.status(404).end();
+  } catch (err) {
+    console.error("Error in GET /api/learning/:id/image:", err);
+    return res.status(500).end();
   }
 });
 
