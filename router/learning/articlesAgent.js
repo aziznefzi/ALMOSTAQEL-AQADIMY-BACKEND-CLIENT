@@ -20,6 +20,19 @@ const ALLOWED_PUBLIC_SORT_FIELDS = [
 ];
 
 const RESERVED_SLUGS = new Set(["agent", "approve", "new", "create", "list"]);
+const ALLOWED_ARTICLE_TYPES = ["daily_news", "educational", "technical"];
+
+const resolveArticleType = (doc) => {
+  if (doc?.articleType && ALLOWED_ARTICLE_TYPES.includes(doc.articleType)) {
+    return doc.articleType;
+  }
+  const cat = String(doc?.category || doc?.tag || "").toLowerCase();
+  if (doc?.source === "ai_agent" || cat.includes("news")) return "daily_news";
+  if (cat.includes("educat") || cat.includes("tutorial") || cat.includes("guide") || cat.includes("learn")) {
+    return "educational";
+  }
+  return "technical";
+};
 
 // ============================================================================
 // Rate Limiting for External AI Agent Submissions
@@ -272,6 +285,18 @@ const validateAndSanitizeAgentPayload = (body) => {
     }
   }
 
+  // 9B. articleType (optional: daily_news | educational | technical; defaults to daily_news for AI Agent)
+  let articleType = "daily_news";
+  if (body.articleType !== undefined && body.articleType !== null && body.articleType !== "") {
+    if (typeof body.articleType !== "string" || !ALLOWED_ARTICLE_TYPES.includes(body.articleType.trim())) {
+      errors.push(
+        `articleType must be one of: ${ALLOWED_ARTICLE_TYPES.join(", ")}.`
+      );
+    } else {
+      articleType = body.articleType.trim();
+    }
+  }
+
   // 10. readTime (optional positive integer)
   let readTime = estimateReadTime(content || contentAr);
   if (body.readTime !== undefined && body.readTime !== null && body.readTime !== "") {
@@ -372,6 +397,7 @@ const validateAndSanitizeAgentPayload = (body) => {
       tags,
       tag: tags[0] || category,
       category,
+      articleType,
       author,
       instructor: author,
       readTime,
@@ -395,6 +421,7 @@ const toPublicArticleCard = (item) => {
     preorders,
     approvedBy,
     imageDataUrl,
+    source,
     ...publicFields
   } = item;
 
@@ -409,6 +436,10 @@ const toPublicArticleCard = (item) => {
   return {
     ...publicFields,
     id: item._id,
+    author: "Almostaqel Academy",
+    instructor: "Almostaqel Academy",
+    articleType: resolveArticleType(item),
+    publishedAt: item.publishedAt || item.approvedAt || item.createdAt,
     image: deliveryImage,
     thumbnail: {
       url: deliveryImage,
@@ -416,7 +447,6 @@ const toPublicArticleCard = (item) => {
       publicId: item.thumbnail?.publicId || "",
       alt: item.thumbnail?.alt || item.title || "",
     },
-    source: item.source || "admin",
     excerpt: item.excerpt || item.description || "",
     excerptAr: item.excerptAr || item.descriptionAr || "",
     tags: Array.isArray(item.tags) && item.tags.length > 0 ? item.tags : item.tag ? [item.tag] : [],
@@ -495,6 +525,7 @@ router.post(
         category: data.category,
         tag: data.tag,
         tags: data.tags,
+        articleType: data.articleType,
         author: data.author,
         instructor: data.instructor,
         readTime: data.readTime,
@@ -512,6 +543,7 @@ router.post(
         availabilityStatus: "available",
         price: 0,
         priceAfter: 0,
+        publishedAt: null,
         approvedAt: null,
         approvedBy: null,
       });
@@ -529,6 +561,7 @@ router.post(
           excerpt: obj.excerpt,
           tags: obj.tags,
           category: obj.category,
+          articleType: obj.articleType,
           readTime: obj.readTime,
           seo: obj.seo,
           source: obj.source,

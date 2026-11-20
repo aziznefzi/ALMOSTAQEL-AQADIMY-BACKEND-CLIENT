@@ -12,7 +12,7 @@ import {
   validateYouTubeVideo,
 } from "../../../utils/mediaValidation.js";
 import coursesRouter from "./courses.js";
-import articlesRouter from "./articles.js";
+import articlesRouter, { resolveArticleType } from "./articles.js";
 import learningVideoRouter from "./learningVideo.js";
 import ordersRouter from "./orders.js";
 import { sendOrderEmail } from "../../../router/learning/orders.js";
@@ -247,6 +247,11 @@ router.get("/learning", AdminAuth, async (req, res) => {
         ...i,
         id: i._id,
         source: i.source || "admin",
+        ...(String(i.type || "").toLowerCase().includes("article")
+          ? { articleType: resolveArticleType(i) }
+          : {}),
+        publishedAt:
+          i.publishedAt || i.approvedAt || (i.status === "published" ? i.createdAt : null),
         courseVideos: Array.isArray(i.courseVideos)
           ? i.courseVideos.map((v) => ({ ...v, id: v._id }))
           : [],
@@ -286,6 +291,7 @@ router.post("/learning", AdminAuth, async (req, res) => {
       contentAr,
       category,
       tag,
+      articleType,
       level,
       levelAr,
       instructor,
@@ -368,6 +374,7 @@ router.post("/learning", AdminAuth, async (req, res) => {
           title: String(v.title).trim(),
           titleAr: String(v.titleAr || "").trim(),
           description: String(v.description || "").trim(),
+          descriptionAr: String(v.descriptionAr || "").trim(),
           videoUrl: ytCheck.videoUrl,
           provider: "youtube",
           youtubeId: ytCheck.youtubeId,
@@ -378,9 +385,17 @@ router.post("/learning", AdminAuth, async (req, res) => {
       }
     }
 
+    const resolvedStatus = ["pending", "published", "draft", "archived"].includes(status)
+      ? status
+      : "published";
+    const resolvedArticleType = ["daily_news", "educational", "technical"].includes(articleType)
+      ? articleType
+      : "technical";
+
     const newItem = await Learning.create({
       type: normalizedType,
       source: "admin",
+      articleType: resolvedArticleType,
       title: title.trim(),
       titleAr: titleAr?.trim() || "",
       description: description?.trim() || "",
@@ -404,7 +419,8 @@ router.post("/learning", AdminAuth, async (req, res) => {
       readTime: Number(readTime) || 0,
       price: Number(price) || 0,
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
-      status: ["pending", "published", "draft", "archived"].includes(status) ? status : "published",
+      status: resolvedStatus,
+      publishedAt: resolvedStatus === "published" ? new Date() : null,
       enrollments: Number(enrollments) || 0,
       views: Number(views) || 0,
       rating: Number(rating) || 5.0,
@@ -494,6 +510,7 @@ router.put("/learning/:id", AdminAuth, async (req, res) => {
       "contentAr",
       "category",
       "tag",
+      "articleType",
       "level",
       "levelAr",
       "instructor",
@@ -517,8 +534,18 @@ router.put("/learning/:id", AdminAuth, async (req, res) => {
 
     for (const key of updatable) {
       if (req.body[key] !== undefined) {
+        if (
+          key === "articleType" &&
+          !["daily_news", "educational", "technical"].includes(req.body[key])
+        ) {
+          continue;
+        }
         item[key] = req.body[key];
       }
+    }
+
+    if (item.status === "published" && !item.publishedAt) {
+      item.publishedAt = new Date();
     }
 
     await item.save();
@@ -548,6 +575,10 @@ router.patch("/learning/:id/status", AdminAuth, async (req, res) => {
       item.status = req.body.status;
     } else {
       item.status = item.status === "published" ? "draft" : "published";
+    }
+
+    if (item.status === "published" && !item.publishedAt) {
+      item.publishedAt = new Date();
     }
 
     await item.save();

@@ -17,6 +17,11 @@ const courseVideoSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+    descriptionAr: {
+      type: String,
+      default: "",
+      trim: true,
+    },
     videoUrl: {
       type: String,
       required: true,
@@ -135,11 +140,21 @@ const learningSchema = new mongoose.Schema(
       default: "admin",
       index: true,
     },
+    articleType: {
+      type: String,
+      enum: ["daily_news", "educational", "technical"],
+      default: "technical",
+      index: true,
+    },
     status: {
       type: String,
       enum: ["pending", "published", "draft", "archived"],
       default: "published",
       index: true,
+    },
+    publishedAt: {
+      type: Date,
+      default: null,
     },
     approvedAt: {
       type: Date,

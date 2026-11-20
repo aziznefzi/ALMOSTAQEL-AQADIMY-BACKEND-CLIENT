@@ -96,6 +96,20 @@ const ALLOWED_SORT_FIELDS = [
   "title",
 ];
 
+const ALLOWED_ARTICLE_TYPES = ["daily_news", "educational", "technical"];
+
+const resolveArticleType = (doc) => {
+  if (doc?.articleType && ALLOWED_ARTICLE_TYPES.includes(doc.articleType)) {
+    return doc.articleType;
+  }
+  const cat = String(doc?.category || doc?.tag || "").toLowerCase();
+  if (doc?.source === "ai_agent" || cat.includes("news")) return "daily_news";
+  if (cat.includes("educat") || cat.includes("tutorial") || cat.includes("guide") || cat.includes("learn")) {
+    return "educational";
+  }
+  return "technical";
+};
+
 // Strip protected media/article body AND bulky legacy Base64 data from public catalog cards
 const toPublicCatalogItem = (item) => {
   const courseVideosCount = Array.isArray(item.courseVideos)
@@ -112,8 +126,13 @@ const toPublicCatalogItem = (item) => {
     contentAr,
     preorders,
     imageDataUrl,
+    source,
     ...publicFields
   } = item;
+
+  const isArticleItem =
+    String(item.type || "").toLowerCase().includes("article");
+  const publicAuthor = isArticleItem ? "Almostaqel Academy" : item.author || "";
 
   const thumbnailUrl = item.thumbnail?.url || item.image || "";
   const isExternalUrl =
@@ -131,6 +150,9 @@ const toPublicCatalogItem = (item) => {
   return {
     ...publicFields,
     id: item._id,
+    author: publicAuthor,
+    ...(isArticleItem ? { articleType: resolveArticleType(item) } : {}),
+    publishedAt: item.publishedAt || item.approvedAt || item.createdAt,
     image: deliveryImage,
     thumbnail: {
       url: deliveryImage,
@@ -138,7 +160,6 @@ const toPublicCatalogItem = (item) => {
       publicId: item.thumbnail?.publicId || "",
       alt: item.thumbnail?.alt || item.title || "",
     },
-    source: item.source || "admin",
     excerpt: item.excerpt || item.description || "",
     excerptAr: item.excerptAr || item.descriptionAr || "",
     availabilityStatus: item.availabilityStatus || "preorder",
@@ -396,7 +417,8 @@ const handleGetProtectedItem = async (req, res) => {
         }))
       : [];
 
-    const { imageDataUrl, ...safeItem } = item;
+    const { imageDataUrl, source, ...safeItem } = item;
+    const isArticleItem = String(item.type || "").toLowerCase().includes("article");
     const deliveryImage =
       item.thumbnail?.url ||
       (item.image && !String(item.image).startsWith("data:")
@@ -410,6 +432,14 @@ const handleGetProtectedItem = async (req, res) => {
       item: {
         ...safeItem,
         id: item._id,
+        ...(isArticleItem
+          ? {
+              author: "Almostaqel Academy",
+              instructor: "Almostaqel Academy",
+              articleType: resolveArticleType(item),
+            }
+          : {}),
+        publishedAt: item.publishedAt || item.approvedAt || item.createdAt,
         image: deliveryImage,
         videoUrl: resolvedPlayback.playbackUrl || item.videoUrl || "",
         videoMedia: resolvedPlayback,

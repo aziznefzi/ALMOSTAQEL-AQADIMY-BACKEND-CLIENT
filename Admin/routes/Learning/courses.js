@@ -180,6 +180,7 @@ router.post("/learning/courses", AdminAuth, async (req, res) => {
           title: String(v.title).trim(),
           titleAr: String(v.titleAr || "").trim(),
           description: String(v.description || "").trim(),
+          descriptionAr: String(v.descriptionAr || "").trim(),
           videoUrl: ytCheck.videoUrl,
           provider: "youtube",
           youtubeId: ytCheck.youtubeId,
@@ -346,7 +347,7 @@ router.post("/learning/courses/:id/videos", AdminAuth, async (req, res) => {
       return res.status(404).json({ message: "Course not found" });
     }
 
-    const { title, titleAr, description, videoUrl, duration } = req.body;
+    const { title, titleAr, description, descriptionAr, videoUrl, duration } = req.body;
     if (!title || !String(title).trim()) {
       return res.status(400).json({ message: "Video title is required" });
     }
@@ -362,6 +363,7 @@ router.post("/learning/courses/:id/videos", AdminAuth, async (req, res) => {
       title: String(title).trim(),
       titleAr: String(titleAr || "").trim(),
       description: String(description || "").trim(),
+      descriptionAr: String(descriptionAr || "").trim(),
       videoUrl: ytCheck.videoUrl,
       provider: "youtube",
       youtubeId: ytCheck.youtubeId,
@@ -401,7 +403,7 @@ router.put("/learning/courses/:id/videos/:videoId", AdminAuth, async (req, res) 
       return res.status(404).json({ message: "Video not found in this course" });
     }
 
-    const { title, titleAr, description, videoUrl, duration } = req.body;
+    const { title, titleAr, description, descriptionAr, videoUrl, duration } = req.body;
     if (title !== undefined) {
       if (!String(title).trim()) {
         return res.status(400).json({ message: "Video title cannot be empty" });
@@ -410,6 +412,7 @@ router.put("/learning/courses/:id/videos/:videoId", AdminAuth, async (req, res) 
     }
     if (titleAr !== undefined) video.titleAr = String(titleAr).trim();
     if (description !== undefined) video.description = String(description).trim();
+    if (descriptionAr !== undefined) video.descriptionAr = String(descriptionAr).trim();
     if (videoUrl !== undefined) {
       const ytCheck = validateYouTubeVideo(videoUrl);
       if (!ytCheck.valid) {

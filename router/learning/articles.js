@@ -7,6 +7,20 @@ import { getMsg } from "../../utils/messages.js";
 
 const router = express.Router();
 
+const ALLOWED_ARTICLE_TYPES = ["daily_news", "educational", "technical"];
+
+const resolveArticleType = (doc) => {
+  if (doc?.articleType && ALLOWED_ARTICLE_TYPES.includes(doc.articleType)) {
+    return doc.articleType;
+  }
+  const cat = String(doc?.category || doc?.tag || "").toLowerCase();
+  if (doc?.source === "ai_agent" || cat.includes("news")) return "daily_news";
+  if (cat.includes("educat") || cat.includes("tutorial") || cat.includes("guide") || cat.includes("learn")) {
+    return "educational";
+  }
+  return "technical";
+};
+
 // ============================================================================
 // GET & POST /api/learning/articles/:id - Protected Article Content
 // Supports lookup by MongoDB _id or slug; strictly requires status === "published".
@@ -97,7 +111,7 @@ const handleGetProtectedArticle = async (req, res) => {
 
     await Learning.updateOne({ _id: article._id }, { $inc: { views: 1 } });
 
-    const { imageDataUrl, ...safeArticle } = article;
+    const { imageDataUrl, source, ...safeArticle } = article;
     const deliveryImage =
       article.thumbnail?.url ||
       (article.image && !String(article.image).startsWith("data:")
@@ -110,8 +124,11 @@ const handleGetProtectedArticle = async (req, res) => {
       item: {
         ...safeArticle,
         id: article._id,
+        author: "Almostaqel Academy",
+        instructor: "Almostaqel Academy",
+        articleType: resolveArticleType(article),
+        publishedAt: article.publishedAt || article.approvedAt || article.createdAt,
         image: deliveryImage,
-        source: article.source || "admin",
       },
     });
   } catch (err) {

@@ -11,6 +11,19 @@ const escapeRegex = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const ALLOWED_SORT_FIELDS = ["createdAt", "updatedAt", "title", "views", "readTime", "rating"];
 const ALLOWED_STATUS_FILTERS = ["all", "pending", "published", "draft", "archived"];
 const ALLOWED_ARTICLE_STATUSES = ["pending", "published", "draft", "archived"];
+const ALLOWED_ARTICLE_TYPES = ["daily_news", "educational", "technical"];
+
+export const resolveArticleType = (doc) => {
+  if (doc?.articleType && ALLOWED_ARTICLE_TYPES.includes(doc.articleType)) {
+    return doc.articleType;
+  }
+  const cat = String(doc?.category || doc?.tag || "").toLowerCase();
+  if (doc?.source === "ai_agent" || cat.includes("news")) return "daily_news";
+  if (cat.includes("educat") || cat.includes("tutorial") || cat.includes("guide") || cat.includes("learn")) {
+    return "educational";
+  }
+  return "technical";
+};
 
 const formatArticleDoc = (doc) => {
   const obj = typeof doc.toObject === "function" ? doc.toObject() : doc;
@@ -18,6 +31,8 @@ const formatArticleDoc = (doc) => {
     ...obj,
     id: obj._id,
     source: obj.source || "admin",
+    articleType: resolveArticleType(obj),
+    publishedAt: obj.publishedAt || obj.approvedAt || (obj.status === "published" ? obj.createdAt : null),
   };
 };
 
@@ -139,6 +154,7 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       price,
       priceAfter,
       status,
+      articleType,
       image,
       thumbnail,
       imageDataUrl,
@@ -168,10 +184,12 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       ? tags.map((t) => String(t).trim()).filter(Boolean)
       : [];
     const cleanSlug = typeof slug === "string" && slug.trim() ? slug.trim().toLowerCase() : undefined;
+    const finalStatus = ALLOWED_ARTICLE_STATUSES.includes(status) ? status : "published";
 
     const newArticle = await Learning.create({
       type: "article",
       source: "admin",
+      articleType: ALLOWED_ARTICLE_TYPES.includes(articleType) ? articleType : "technical",
       title: title.trim(),
       titleAr: titleAr?.trim() || "",
       ...(cleanSlug ? { slug: cleanSlug } : {}),
@@ -189,7 +207,8 @@ router.post("/learning/articles", AdminAuth, async (req, res) => {
       readTime: Number(readTime) || 5,
       price: Number(price) || 0,
       priceAfter: priceAfter !== undefined ? Number(priceAfter) : Number(price) || 0,
-      status: ALLOWED_ARTICLE_STATUSES.includes(status) ? status : "published",
+      status: finalStatus,
+      publishedAt: finalStatus === "published" ? new Date() : null,
       rating: Number(rating) || 5.0,
       image: imageCheck.image,
       thumbnail: imageCheck.thumbnail,
@@ -266,6 +285,7 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
       "price",
       "priceAfter",
       "status",
+      "articleType",
       "stack",
       "rating",
       "seo",
@@ -276,10 +296,17 @@ router.put("/learning/articles/:id", AdminAuth, async (req, res) => {
         if (key === "slug") {
           const cleanSlug = typeof req.body.slug === "string" ? req.body.slug.trim().toLowerCase() : "";
           article.slug = cleanSlug || undefined;
+        } else if (key === "articleType") {
+          if (ALLOWED_ARTICLE_TYPES.includes(req.body.articleType)) {
+            article.articleType = req.body.articleType;
+          }
         } else {
           article[key] = req.body[key];
         }
       }
+    }
+    if (article.status === "published" && !article.publishedAt) {
+      article.publishedAt = new Date();
     }
 
     await article.save();
@@ -354,6 +381,9 @@ export const handleApproveArticle = async (req, res) => {
       article.availabilityStatus = "available";
     }
     article.approvedAt = new Date();
+    if (!article.publishedAt) {
+      article.publishedAt = article.approvedAt;
+    }
     if (req.admin?._id) {
       article.approvedBy = req.admin._id;
     }
